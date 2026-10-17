@@ -2,7 +2,7 @@
 
 Where code lives and which way imports point. This is a living document: update it in the same change that moves the tree.
 
-> **Status:** target layout. The tree is built in step 1 (skeleton) of the [build order](../design-doc.html).
+> **Status:** partly built. Built so far: `backend/app/{main.py,api,config,db}`, `backend/alembic`, `backend/tests/{unit,integration}`, `frontend/`, `Dockerfile`, `docker-compose.yml` and `Makefile`. Each remaining folder is created in the [build order](../design-doc.html) step that first needs it.
 
 ## Layout
 
@@ -39,7 +39,7 @@ dev-slack-bot/
 │       └── styles/tokens.css    # design tokens
 ├── Dockerfile                   # builds frontend, copies it into the backend image
 ├── docker-compose.yml           # app + Postgres (+ optional Langfuse)
-├── Makefile                     # dev commands: up, down, test, lint, migrate
+├── Makefile                     # dev commands: up, dev, down, test, lint, migrate
 ├── .env.example
 ├── .github/workflows/           # CI, added once the GitHub repository exists
 └── docs/                        # adrs/, specs/, plans/

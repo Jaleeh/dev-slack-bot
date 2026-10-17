@@ -4,7 +4,21 @@ A self-hosted chat bot that answers questions about your GitHub repositories, so
 
 Ask it in Slack how a business rule works, or whether a reported problem is a bug or a setup issue. It reads your code and replies in the thread. It never changes code.
 
-> **Status:** design only. No code exists yet. See the [architecture design doc](design-doc.html).
+> **Status:** step 1 (skeleton) is built: a status page showing the backend and database are connected. See the [architecture design doc](design-doc.html) for what comes next.
+
+## Quick start
+
+1. Install Docker and Make.
+2. Run `make up`.
+3. Open http://localhost:8000.
+
+`make help` lists every command.
+
+### Developing
+
+`make dev` runs the backend and frontend on your machine with hot reload, and keeps Postgres in Docker. Open http://localhost:3000; `/api` calls go to the backend on port 8000. Stop it with Ctrl-C.
+
+`make dev`, `make test` and `make lint` need [uv](https://docs.astral.sh/uv/), Node 24 (`nvm use` reads `.nvmrc`) and pnpm on your machine.
 
 ## Why
 
