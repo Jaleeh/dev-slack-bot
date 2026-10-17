@@ -1,0 +1,1709 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>dev-slack-bot · bot architecture</title>
+  <style>
+/* Consistent style — design documents.
+ *
+ * FROZEN CONTRACT. Copy this file verbatim into a single <style> block.
+ * Never regenerate, reformat or minify it. A genre format appends its
+ * rules after this file and never edits it. Two documents produced
+ * months apart must have byte-identical chrome.
+ */
+
+:root {
+  --bg: #fbfaf7;
+  --fg: #1c1c1c;
+  --muted: #6a6a6a;
+  --rule: #e3e0d8;
+  --accent: #2a5f7f;
+  --accent-soft: #e8f0f4;
+  --code-bg: #f2f0e9;
+  --group-bg: #f5f3ec;
+  --warn-bg: #fbf3df;
+  --warn-fg: #6b4a00;
+
+  --bronze: #8a6a3a;
+  --silver: #5a6a78;
+  --gold: #8a7536;
+
+  --badge-green-bg: #e2ecde;
+  --badge-green-fg: #3d5a32;
+  --badge-amber-bg: #f3ead0;
+  --badge-amber-fg: #6b5a1f;
+  --badge-blue-bg: #dfe7ee;
+  --badge-blue-fg: #2a4d68;
+}
+
+* { box-sizing: border-box; }
+
+html {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+               "Helvetica Neue", Arial, sans-serif;
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--fg);
+  background: var(--bg);
+}
+
+body {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 48px 32px 96px;
+}
+
+code, pre, .mono {
+  font-family: "SF Mono", Monaco, Menlo, Consolas, "Liberation Mono",
+               monospace;
+  font-size: 0.92em;
+}
+
+/* --- header ---------------------------------------------------------- */
+
+header {
+  border-bottom: 1px solid var(--rule);
+  padding-bottom: 24px;
+  margin-bottom: 36px;
+}
+
+header .eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-size: 0.78em;
+  color: var(--muted);
+  margin: 0 0 6px;
+}
+
+header h1 {
+  margin: 0 0 8px;
+  font-size: 2.1em;
+  font-weight: 600;
+}
+
+header .subtitle {
+  margin: 0;
+  color: var(--muted);
+  font-size: 1.05em;
+  max-width: 720px;
+}
+
+/* --- structure ------------------------------------------------------- */
+
+section { margin-bottom: 52px; }
+
+h2 {
+  font-size: 1.3em;
+  margin: 0 0 16px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--rule);
+}
+
+h3 {
+  font-size: 1.05em;
+  margin: 24px 0 10px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  font-weight: 600;
+}
+
+p { margin: 0 0 14px; }
+
+.lede {
+  font-size: 1.05em;
+  color: #2a2a2a;
+  margin-bottom: 20px;
+}
+
+/* --- inline ---------------------------------------------------------- */
+
+/* em is a chip, not italics. */
+.lede em, p em, li em, td em {
+  font-style: normal;
+  background: var(--accent-soft);
+  padding: 1px 5px;
+  border-radius: 3px;
+  font-size: 0.92em;
+}
+
+code, .lede code, p code, li code, td code {
+  background: var(--code-bg);
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+/* A link is accent-coloured with a hairline rule, not browser blue. */
+a {
+  color: var(--accent);
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+
+a:hover { text-decoration-thickness: 2px; }
+
+/* --- badge ----------------------------------------------------------- */
+
+/* Shape only. A genre format maps semantic classes onto the colour pairs
+ * above, e.g. .badge.accepted { background: var(--badge-amber-bg); ... } */
+.badge {
+  display: inline-block;
+  font-size: 0.72em;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 3px;
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
+/* --- blocks ---------------------------------------------------------- */
+
+.callout {
+  background: var(--accent-soft);
+  border-radius: 6px;
+  padding: 14px 18px;
+  font-size: 0.95em;
+  margin: 18px 0;
+  border-left: 3px solid var(--accent);
+}
+
+.note {
+  background: var(--warn-bg);
+  color: var(--warn-fg);
+  border-radius: 6px;
+  padding: 14px 18px;
+  font-size: 0.93em;
+  margin-top: 18px;
+}
+
+.flow {
+  background: var(--code-bg);
+  border-radius: 6px;
+  padding: 20px 24px;
+  font-family: "SF Mono", Monaco, Menlo, Consolas, monospace;
+  font-size: 0.92em;
+  white-space: pre;
+  overflow-x: auto;
+  color: #2a2a2a;
+  line-height: 1.45;
+}
+
+.open-questions {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.open-questions li {
+  padding: 14px 0;
+  border-top: 1px solid var(--rule);
+}
+
+.open-questions li:first-child { border-top: none; }
+
+.open-questions strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+/* --- summary table --------------------------------------------------- */
+
+.summary-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.93em;
+}
+
+.summary-table th, .summary-table td {
+  text-align: left;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--rule);
+  vertical-align: top;
+}
+
+.summary-table th {
+  font-size: 0.78em;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.summary-table td:first-child { font-weight: 500; }
+
+/* --- responsive ------------------------------------------------------ */
+
+@media (max-width: 720px) {
+  body { padding: 32px 20px 64px; }
+}
+
+/* --- diagrams -------------------------------------------------------- */
+
+figure.diagram {
+  margin: 0 0 24px;
+  background: var(--code-bg);
+  border-radius: 6px;
+  padding: 24px 24px 18px;
+}
+
+figure.diagram svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  overflow: visible;
+}
+
+figure.diagram figcaption {
+  margin-top: 16px;
+  padding-top: 14px;
+  border-top: 1px solid var(--rule);
+  font-size: 0.88em;
+  color: var(--muted);
+}
+
+.diagram .node {
+  fill: var(--bg);
+  stroke: var(--rule);
+  stroke-width: 1.5;
+}
+
+.diagram .node.accent { stroke: var(--accent); }
+
+.diagram .node-label {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+               "Helvetica Neue", Arial, sans-serif;
+  font-size: 12px;
+  fill: var(--fg);
+  text-anchor: middle;
+}
+
+.diagram .node-label.mono {
+  font-family: "SF Mono", Monaco, Menlo, Consolas, monospace;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.diagram .edge {
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 1.5;
+}
+
+.diagram .edge.accent  { stroke: var(--accent); }
+.diagram .edge.dashed  { stroke-dasharray: 5 4; }
+
+.diagram .arrowhead { fill: var(--muted); }
+.diagram .arrowhead.accent { fill: var(--accent); }
+
+.diagram .edge-label {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+               "Helvetica Neue", Arial, sans-serif;
+  font-size: 11px;
+  fill: var(--muted);
+  text-anchor: middle;
+}
+
+.diagram .edge-label.start { text-anchor: start; }
+.diagram .edge-label.end   { text-anchor: end; }
+
+.diagram .rule { stroke: var(--rule); stroke-width: 1; }
+
+.diagram .caption {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+               "Helvetica Neue", Arial, sans-serif;
+  font-size: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  fill: var(--muted);
+  text-anchor: middle;
+}
+
+.diagram .caption-note {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+               "Helvetica Neue", Arial, sans-serif;
+  font-size: 11px;
+  fill: var(--muted);
+  text-anchor: middle;
+}
+
+@media (max-width: 720px) {
+  figure.diagram { overflow-x: auto; padding: 16px; }
+  figure.diagram svg { min-width: 620px; }
+}
+
+.layer-header {
+  display: flex;
+  align-items: baseline;
+  gap: 14px;
+  margin-bottom: 4px;
+}
+
+.layer-badge {
+  font-size: 0.72em;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 3px;
+  color: white;
+}
+
+.layer-badge.bronze  { background: var(--bronze); }
+.layer-badge.silver  { background: var(--silver); }
+.layer-badge.gold    { background: var(--gold); }
+.layer-badge.derived { background: #555; }
+
+.layer-title {
+  font-family: "SF Mono", Monaco, Menlo, Consolas, monospace;
+  font-size: 1.25em;
+  font-weight: 600;
+}
+
+.layer-role {
+  color: var(--muted);
+  margin: 4px 0 18px;
+  font-size: 0.98em;
+}
+
+.group, .constraints, .indexes {
+  background: var(--group-bg);
+  border: 1px solid var(--rule);
+  border-radius: 8px;
+  margin-bottom: 20px;
+}
+
+.group { padding: 20px 24px; }
+.constraints, .indexes { padding: 6px 24px 20px; }
+
+.group-header {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  margin-bottom: 14px;
+}
+
+.constraints .group-header,
+.indexes .group-header {
+  padding-top: 14px;
+  margin-bottom: 0;
+}
+
+.group-title {
+  font-size: 0.78em;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--accent);
+  font-weight: 600;
+}
+
+.group-count {
+  font-size: 0.78em;
+  color: var(--muted);
+}
+
+.column, .constraint, .index {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr);
+  gap: 24px;
+  padding: 14px 0;
+  border-top: 1px solid var(--rule);
+}
+
+.group .group-header + .column,
+.constraints .group-header + .constraint,
+.indexes .group-header + .index {
+  border-top: none;
+  padding-top: 4px;
+}
+h4 {
+  font-size: 0.95em;
+  font-weight: 600;
+  margin: 18px 0 6px;
+}
+
+
+.column .def .name {
+  display: block;
+  font-family: "SF Mono", Monaco, Menlo, Consolas, monospace;
+  font-size: 1.02em;
+  font-weight: 600;
+  color: var(--fg);
+  margin-bottom: 2px;
+}
+
+.column .def .type {
+  display: block;
+  font-family: "SF Mono", Monaco, Menlo, Consolas, monospace;
+  font-size: 0.86em;
+  color: var(--muted);
+}
+
+.column .annotation,
+.constraint .body,
+.index .body {
+  font-size: 0.95em;
+  color: #2a2a2a;
+}
+
+.column .annotation p:last-child,
+.constraint .body p:last-child,
+.index .body p:last-child { margin-bottom: 0; }
+
+.constraint .label, .index .label {
+  font-family: "SF Mono", Monaco, Menlo, Consolas, monospace;
+  font-weight: 600;
+  font-size: 0.95em;
+}
+
+.principles {
+  counter-reset: principle;
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.principles li {
+  counter-increment: principle;
+  padding: 14px 0 14px 44px;
+  border-top: 1px solid var(--rule);
+  position: relative;
+}
+
+.principles li:first-child { border-top: none; }
+
+.principles li::before {
+  content: counter(principle);
+  position: absolute;
+  left: 0;
+  top: 14px;
+  width: 28px;
+  height: 28px;
+  border-radius: 14px;
+  background: var(--accent);
+  color: white;
+  font-size: 0.82em;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* display: block, so the principle's name sits on its own line above the
+   body. Stripping the <strong> collapses the two into one run of text. */
+.principles strong {
+  display: block;
+  margin-bottom: 4px;
+}
+
+@media (max-width: 720px) {
+  .column, .constraint, .index { grid-template-columns: 1fr; gap: 8px; }
+}
+
+/* --- status badges --------------------------------------------------- */
+
+.badge.decided  { background: var(--badge-green-bg); color: var(--badge-green-fg); }
+.badge.proposed { background: var(--badge-amber-bg); color: var(--badge-amber-fg); }
+.badge.later    { background: var(--badge-blue-bg);  color: var(--badge-blue-fg); }
+  </style>
+</head>
+<body>
+
+<header>
+  <p class="eyebrow">dev-slack-bot</p>
+  <h1>Bot architecture</h1>
+  <p class="subtitle">
+    An open-source, self-hosted chat bot that answers questions about a
+    company's GitHub repositories, so project managers and support staff get
+    answers without asking a developer. This document replaces the earlier
+    learning-project design. Jira tickets, issue prioritisation and bug
+    fixing return as future scope.
+  </p>
+  <p class="subtitle" style="margin-top: 10px; font-size: 0.95em;">
+    <strong>Implementation status.</strong> Design only. No code exists yet.
+    Each choice below carries a badge: <span class="badge decided">decided</span>
+    by the project owner, <span class="badge proposed">proposed</span> and
+    awaiting confirmation, or <span class="badge later">later</span> for work
+    deferred past the first release.
+  </p>
+</header>
+
+<section>
+  <h2>What this is</h2>
+  <p class="lede">
+    A non-technical person asks a question, such as how a business rule works
+    or whether a reported problem is a bug or a setup issue. The bot reads the
+    connected repositories and answers in the thread. It never changes code.
+    Each company hosts its own copy and chooses its own model provider and
+    region, so the company decides which country its data reaches. The
+    project itself runs no servers and receives no data.
+  </p>
+  <p>
+    The project has two goals of equal weight: a product that is cheap to run
+    and easy to set up, and a way for its maintainer to learn AI engineering
+    with tools companies use. The second goal keeps evals and both retrieval
+    methods in scope, and selects LangGraph, Postgres with pgvector and
+    LangChain integrations over hand-written equivalents.
+  </p>
+</section>
+
+<section>
+  <h2>Mental model</h2>
+
+  <p class="lede">
+    Slack messages, or browser chat messages during a trial, reach a chat
+    adapter, which converts them into a platform-neutral question. A LangGraph
+    agent answers it using retrieval tools over local repository clones and
+    a vector index in Postgres, and calls the chat and embedding providers the
+    company configured through a PII redactor, which swaps personal data for
+    placeholders on the way out and back on the way in. The admin UI writes settings and secrets through the
+    FastAPI backend into Postgres. The FastAPI app and Postgres ship as one
+    Docker Compose stack.
+  </p>
+
+  <figure class="diagram">
+    <svg viewBox="0 0 860 330" role="img"
+         aria-label="Slack, browser chat and later Teams reach the LangGraph
+                     agent through chat adapters; every call from the agent to
+                     the model and embedding providers passes through the PII
+                     redactor; the agent reads repository clones taken from
+                     GitHub and uses Postgres, which the admin UI writes
+                     settings into through the admin API.">
+      <defs>
+        <marker id="bot-arch-arrow" viewBox="0 0 10 10" refX="9" refY="5"
+                markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10"
+                orient="auto">
+          <path class="arrowhead" d="M0 0 L10 5 L0 10 Z"/>
+        </marker>
+        <marker id="bot-arch-arrow-accent" viewBox="0 0 10 10" refX="9" refY="5"
+                markerUnits="userSpaceOnUse" markerWidth="10" markerHeight="10"
+                orient="auto">
+          <path class="arrowhead accent" d="M0 0 L10 5 L0 10 Z"/>
+        </marker>
+      </defs>
+
+      <rect class="node" x="8" y="20" width="110" height="42" rx="5"/>
+      <text class="node-label" x="63" y="46">Slack</text>
+
+      <rect class="node" x="8" y="75" width="110" height="42" rx="5"/>
+      <text class="node-label" x="63" y="101">Teams (later)</text>
+
+      <rect class="node" x="8" y="130" width="110" height="42" rx="5"/>
+      <text class="node-label" x="63" y="156">browser chat</text>
+
+      <rect class="node" x="8" y="230" width="110" height="42" rx="5"/>
+      <text class="node-label" x="63" y="256">admin UI</text>
+
+      <rect class="node" x="160" y="75" width="120" height="42" rx="5"/>
+      <text class="node-label" x="220" y="101">chat adapters</text>
+
+      <rect class="node" x="160" y="230" width="120" height="42" rx="5"/>
+      <text class="node-label" x="220" y="256">admin API</text>
+
+      <rect class="node" x="320" y="75" width="130" height="42" rx="5"/>
+      <text class="node-label" x="385" y="101">LangGraph agent</text>
+
+      <rect class="node" x="320" y="230" width="130" height="42" rx="5"/>
+      <text class="node-label" x="385" y="256">Postgres + pgvector</text>
+
+      <rect class="node accent" x="490" y="75" width="120" height="42" rx="5"/>
+      <text class="node-label" x="550" y="101">PII redactor</text>
+
+      <rect class="node" x="490" y="180" width="120" height="42" rx="5"/>
+      <text class="node-label" x="550" y="206">repo clones</text>
+
+      <rect class="node" x="650" y="10" width="140" height="42" rx="5"/>
+      <text class="node-label" x="720" y="36">model provider</text>
+
+      <rect class="node" x="650" y="75" width="140" height="42" rx="5"/>
+      <text class="node-label" x="720" y="101">embedding provider</text>
+
+      <rect class="node" x="650" y="180" width="140" height="42" rx="5"/>
+      <text class="node-label" x="720" y="206">GitHub</text>
+
+      <path class="edge" d="M118 41 H139 V96 H160"
+            marker-end="url(#bot-arch-arrow)"/>
+      <path class="edge dashed" d="M118 96 H139"/>
+      <path class="edge" d="M118 151 H139 V96"/>
+
+      <line class="edge" x1="280" y1="96" x2="320" y2="96"
+            marker-end="url(#bot-arch-arrow)"/>
+
+      <line class="edge accent" x1="450" y1="96" x2="490" y2="96"
+            marker-end="url(#bot-arch-arrow-accent)"/>
+
+      <path class="edge" d="M610 85 H630 V31 H650"
+            marker-end="url(#bot-arch-arrow)"/>
+      <line class="edge" x1="610" y1="96" x2="650" y2="96"
+            marker-end="url(#bot-arch-arrow)"/>
+
+      <path class="edge" d="M450 107 H470 V201 H490"
+            marker-end="url(#bot-arch-arrow)"/>
+
+      <line class="edge" x1="650" y1="201" x2="610" y2="201"
+            marker-end="url(#bot-arch-arrow)"/>
+      <text class="edge-label" x="630" y="193">clone</text>
+
+      <line class="edge" x1="118" y1="251" x2="160" y2="251"
+            marker-end="url(#bot-arch-arrow)"/>
+      <line class="edge" x1="280" y1="251" x2="320" y2="251"
+            marker-end="url(#bot-arch-arrow)"/>
+
+      <line class="edge" x1="385" y1="230" x2="385" y2="117"
+            marker-end="url(#bot-arch-arrow)"/>
+
+      <line class="rule" x1="8" y1="292" x2="852" y2="292"/>
+
+      <text class="caption" x="63" y="312">clients</text>
+      <text class="caption" x="385" y="312">Docker Compose stack</text>
+      <text class="caption" x="720" y="312">external services</text>
+    </svg>
+    <figcaption>
+      The agent holds no chat platform code, so a new platform adds one
+      adapter. Every call to a model or embedding provider passes through the
+      PII redactor, so placeholders replace personal data before anything
+      leaves the stack.
+    </figcaption>
+  </figure>
+
+  <h3>Layers</h3>
+  <p>
+    <strong>Chat adapters.</strong> One per platform: Slack and browser chat
+    in the first release, Teams later.
+  </p>
+  <p>
+    <strong>Agent and retrieval.</strong> A LangGraph agent with retrieval
+    tools. A setting selects direct repository search, vector search or both.
+  </p>
+  <p>
+    <strong>Providers.</strong> LangChain chat model and embedding
+    integrations, each selected by a setting.
+  </p>
+  <p>
+    <strong>PII redactor.</strong> Replaces personal data and secrets with
+    typed placeholders on every provider call, and restores them in replies.
+  </p>
+  <p>
+    <strong>Repository access.</strong> A GitHub App for production, a public
+    URL or local folder for trials, and shallow local clones of each.
+  </p>
+  <p>
+    <strong>Setup and admin.</strong> A Next.js UI with a trial path and a
+    full setup path, served as static files by the FastAPI app.
+  </p>
+  <p>
+    <strong>Evals.</strong> A labelled question set that scores retrieval,
+    answers, cost and latency.
+  </p>
+</section>
+
+<section>
+  <h2>Architectural constraints</h2>
+
+  <div class="callout">
+    <strong>The first release is read only.</strong>
+    The bot answers questions and changes nothing: no commits, no pull
+    requests, no issue edits. Creating Jira tickets, prioritising issues and
+    fixing bugs are future scope, set out under <em>Future scope</em>.
+  </div>
+
+  <div class="callout">
+    <strong>Each company decides where its data goes.</strong>
+    The project fixes no region and no provider. The agent sends questions
+    and the code it read to the chat provider, and the indexer sends code
+    chunks to the embedding provider, so those two settings set the data
+    location. The admin UI states the location beside each provider.
+  </div>
+
+  <div class="callout">
+    <strong>Personal data never reaches a provider unredacted.</strong>
+    Every chat and embedding call passes through the PII redactor, whatever
+    the provider, and nothing stored at rest holds real values except the
+    encrypted placeholder mapping. Detection is imperfect, so the provider
+    and region choice remains the second line of protection.
+  </div>
+
+  <div class="callout">
+    <strong>The project runs nothing and receives nothing.</strong>
+    Maintainers publish code, Docker images and documentation. No central
+    server, no shared GitHub App and no usage tracking sent back. Each company
+    creates its own Slack app and GitHub App from manifests in the
+    repository. LangSmith is excluded for the same reason: it is a hosted
+    tracing service, so tracing uses Langfuse, which a company can host
+    itself.
+  </div>
+
+  <div class="callout">
+    <strong>A trial takes minutes on a laptop.</strong>
+    <code>docker compose up</code>, pick a model, point at a repository and
+    chat in the browser. No Slack app, no GitHub App and no public URL. A
+    trial and a production install run the same image; moving to production
+    fills in more settings rather than reinstalling.
+  </div>
+
+  <div class="callout">
+    <strong>Nothing needs a public URL in the first release.</strong>
+    Slack connects through Socket Mode, an outbound connection, and
+    repositories refresh by polling, because GitHub webhooks and the Teams
+    Bot Framework both need an HTTPS endpoint reachable from the internet.
+  </div>
+
+  <div class="callout">
+    <strong>Cheap to run for the hosting company.</strong>
+    Model tokens are the main running cost, so every question has a limit on
+    tool calls and tokens, and prompt caching is on where the provider
+    supports it. The required stack is two containers: the FastAPI app,
+    which also serves the admin UI, and Postgres. Langfuse is optional.
+  </div>
+
+  <div class="callout">
+    <strong>Secrets stay on the server.</strong>
+    Model keys, Slack tokens and GitHub credentials are stored encrypted in
+    Postgres and never returned to the browser after saving. The admin UI
+    requires a login from the first release, because admins enter those
+    secrets there.
+  </div>
+</section>
+
+<section>
+  <h2>Two ways to run</h2>
+
+  <div class="layer-header">
+    <span class="layer-title">trial and production</span>
+  </div>
+  <p class="layer-role">
+    One image and one codebase. The difference is which settings are filled
+    in. <span class="badge decided">decided</span>
+  </p>
+
+  <div class="group">
+    <div class="group-header">
+      <span class="group-title">modes</span>
+      <span class="group-count">2 modes</span>
+    </div>
+
+    <div class="column">
+      <div class="def">
+        <span class="name">Try it locally</span>
+        <span class="type">laptop, minutes</span>
+      </div>
+      <div class="annotation">
+        <p>
+          Browser chat in the admin UI. Repositories from a public GitHub URL
+          or a local folder, with no GitHub App. Ollama keeps everything on
+          the laptop; a pasted key works too.
+        </p>
+      </div>
+    </div>
+
+    <div class="column">
+      <div class="def">
+        <span class="name">Self-host for real</span>
+        <span class="type">the company's own server or cloud</span>
+      </div>
+      <div class="annotation">
+        <p>
+          Slack, the company's GitHub App with selected repositories, and the
+          company's chosen provider and region.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Chat adapters</h2>
+
+  <div class="layer-header">
+    <span class="layer-title">chat adapters</span>
+  </div>
+  <p class="layer-role">
+    Convert between a chat platform and the agent.
+  </p>
+
+  <div class="group">
+    <div class="group-header">
+      <span class="group-title">platforms</span>
+      <span class="group-count">3 platforms</span>
+    </div>
+
+    <div class="column">
+      <div class="def">
+        <span class="name">Slack</span>
+        <span class="type"><span class="badge decided">decided</span></span>
+      </div>
+      <div class="annotation">
+        <p>
+          The production platform in the first release. Built on Slack Bolt
+          for Python <span class="badge decided">decided</span>, connected
+          through Socket Mode <span class="badge decided">decided</span>.
+          Setup ships a Slack app manifest: the admin pastes it into Slack,
+          installs the app and pastes the tokens into the admin UI. A Slack
+          thread maps to one LangGraph thread.
+        </p>
+      </div>
+    </div>
+
+    <div class="column">
+      <div class="def">
+        <span class="name">Browser chat</span>
+        <span class="type"><span class="badge decided">decided</span></span>
+      </div>
+      <div class="annotation">
+        <p>
+          A chat page in the admin UI for trials. It goes through the same
+          adapter boundary as Slack, which proves the boundary before Teams
+          is added.
+        </p>
+      </div>
+    </div>
+
+    <div class="column">
+      <div class="def">
+        <span class="name">Microsoft Teams</span>
+        <span class="type"><span class="badge later">later</span></span>
+      </div>
+      <div class="annotation">
+        <p>
+          Needs an Azure Bot registration, and Microsoft calls the bot at a
+          public HTTPS endpoint. Local runs need a tunnel such as ngrok or
+          dev tunnels. The Azure registration is the hardest setup step for a
+          non-technical admin, so its setup screen needs the most guidance.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Agent and retrieval</h2>
+
+  <div class="layer-header">
+    <span class="layer-title">LangGraph agent</span>
+  </div>
+  <p class="layer-role">
+    Answers one question with retrieval tools, within the per-question budget
+    set under constraints. <span class="badge decided">decided</span>
+  </p>
+
+  <p>
+    Both retrieval methods are built <span class="badge decided">decided</span>.
+    A setting such as <code>RETRIEVAL=direct|vector|hybrid</code> selects
+    which tools the agent receives <span class="badge decided">decided</span>.
+    The evals choose the default. Conversation state lives in Postgres
+    through the LangGraph Postgres checkpointer
+    <span class="badge decided">decided</span>.
+  </p>
+
+  <div class="group">
+    <div class="group-header">
+      <span class="group-title">retrieval methods</span>
+      <span class="group-count">3 settings</span>
+    </div>
+
+    <div class="column">
+      <div class="def">
+        <span class="name">direct</span>
+        <span class="type">tools: grep, read_file</span>
+      </div>
+      <div class="annotation">
+        <p>
+          The agent searches the clone as a developer would. Needs no index
+          and no embedding provider, so a trial can start here. Can use more
+          tokens per question than vector search.
+        </p>
+      </div>
+    </div>
+
+    <div class="column">
+      <div class="def">
+        <span class="name">vector</span>
+        <span class="type">tool: vector_search</span>
+      </div>
+      <div class="annotation">
+        <p>
+          Code is split into chunks, embedded and stored with pgvector through
+          <code>langchain-postgres</code>
+          <span class="badge decided">decided</span>. A refresh re-indexes
+          only changed files. Needs an embedding provider.
+        </p>
+      </div>
+    </div>
+
+    <div class="column">
+      <div class="def">
+        <span class="name">hybrid</span>
+        <span class="type">all three tools</span>
+      </div>
+      <div class="annotation">
+        <p>The agent picks per step. Its cost and accuracy come from the evals.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Providers</h2>
+
+  <div class="layer-header">
+    <span class="layer-title">chat and embedding providers</span>
+  </div>
+  <p class="layer-role">
+    Changing provider changes settings, not code.
+    <span class="badge decided">decided</span>
+  </p>
+
+  <p>
+    Chat models come from LangChain integrations
+    (<code>langchain-anthropic</code>, <code>langchain-aws</code>,
+    <code>langchain-openai</code>, <code>langchain-ollama</code>) through
+    <code>init_chat_model</code> <span class="badge decided">decided</span>.
+    LiteLLM was considered and dropped, because LangGraph already uses these
+    integrations and a second layer would duplicate them. Embeddings use a
+    separate <code>EMBEDDING_PROVIDER</code> setting
+    <span class="badge decided">decided</span>, because Anthropic offers no
+    embeddings API. Options include Ollama (<code>nomic-embed-text</code>),
+    Bedrock (Titan or Cohere) and OpenAI.
+  </p>
+  <p>
+    Technical hosts set provider settings as environment variables. The admin
+    UI writes the same settings for everyone else, and an environment
+    variable takes precedence <span class="badge decided">decided</span>.
+    Each provider in the UI has a <em>Test connection</em> button.
+  </p>
+
+  <div class="group">
+    <div class="group-header">
+      <span class="group-title">providers and data location</span>
+      <span class="group-count">4 entries</span>
+    </div>
+
+    <div class="column">
+      <div class="def">
+        <span class="name">Ollama, vLLM</span>
+        <span class="type">your own machine or server</span>
+      </div>
+      <div class="annotation">
+        <p>
+          Data stays on the host and tokens cost nothing. Answer quality
+          depends on the model, and a good model needs a capable GPU.
+        </p>
+      </div>
+    </div>
+
+    <div class="column">
+      <div class="def">
+        <span class="name">AWS Bedrock</span>
+        <span class="type">AWS region the company selects</span>
+      </div>
+      <div class="annotation">
+        <p>
+          The usual deployment runs the bot in the company's own AWS account,
+          in the same region, with an IAM role on the server, so no key is
+          copied. Cross-region inference profiles can route requests to other
+          regions. Staying in one country needs the in-region model ID or a
+          country-specific inference profile, which not every model offers in
+          every region.
+        </p>
+      </div>
+    </div>
+
+    <div class="column">
+      <div class="def">
+        <span class="name">Azure OpenAI, Google Vertex</span>
+        <span class="type">cloud region the company selects</span>
+      </div>
+      <div class="annotation">
+        <p>Data stays in the selected region when the region is set correctly.</p>
+      </div>
+    </div>
+
+    <div class="column">
+      <div class="def">
+        <span class="name">Anthropic API, OpenAI API</span>
+        <span class="type">mostly US</span>
+      </div>
+      <div class="annotation">
+        <p>
+          Easiest setup: paste a key. Data usually leaves the company's
+          country, and the admin UI says so.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>PII redaction</h2>
+
+  <div class="layer-header">
+    <span class="layer-title">PII redactor</span>
+  </div>
+  <p class="layer-role">
+    Swaps personal data for typed placeholders before every provider call,
+    and swaps the real values back before a reply reaches the user.
+    <span class="badge decided">decided</span>
+  </p>
+
+  <p>
+    A user who asks "why can't Jane Citizen (jane@acme.com) log in?" sends
+    the model "why can't <code>&lt;PERSON_1&gt;</code>
+    (<code>&lt;EMAIL_1&gt;</code>) log in?". The model answers in
+    placeholders, and the restorer puts the real values back in the reply.
+    Typed placeholders were chosen over realistic fake data
+    <span class="badge decided">decided</span>, because a realistic fake name
+    can collide with a real name in the code, and an exact token restores
+    without ambiguity. Detection uses Microsoft Presidio with a spaCy model,
+    running inside the app container so no text leaves the host for
+    detection <span class="badge decided">decided</span>. The spaCy model
+    makes the image larger.
+  </p>
+
+  <div class="group">
+    <div class="group-header">
+      <span class="group-title">rules</span>
+      <span class="group-count">8 rules</span>
+    </div>
+
+    <div class="column">
+      <div class="def">
+        <span class="name">Every provider call</span>
+        <span class="type">one choke point</span>
+      </div>
+      <div class="annotation">
+        <p>
+          Redaction wraps every call to the chat and embedding providers, not
+          only the user's question. <code>grep</code> results, file contents,
+          seed data and test fixtures can hold real names and emails, and code
+          chunks reach the embedding provider during indexing.
+        </p>
+      </div>
+    </div>
+
+    <div class="column">
+      <div class="def">
+        <span class="name">One mapping per thread</span>
+        <span class="type">encrypted, expires</span>
+      </div>
+      <div class="annotation">
+        <p>
+          The same value gets the same placeholder on every turn of a thread,
+          so the model can follow the conversation. The mapping holds the real
+          values, so it is stored encrypted in Postgres, deleted after a set
+          period and never logged.
+        </p>
+      </div>
+    </div>
+
+    <div class="column">
+      <div class="def">
+        <span class="name">Redacted everywhere at rest</span>
+        <span class="type">logs, traces, history</span>
+      </div>
+      <div class="annotation">
+        <p>
+          App logs, Langfuse traces and the LangGraph checkpointer store only
+          redacted text. Real values exist only in the mapping and in the
+          reply sent back to the chat platform.
+        </p>
+      </div>
+    </div>
+
+    <div class="column">
+      <div class="def">
+        <span class="name">Secrets too</span>
+        <span class="type">keys, passwords, tokens</span>
+      </div>
+      <div class="annotation">
+        <p>
+          API keys and passwords committed to a repository are masked before
+          any provider call, with the same placeholder scheme.
+        </p>
+      </div>
+    </div>
+
+    <div class="column">
+      <div class="def">
+        <span class="name">Allow-list</span>
+        <span class="type">editable in the admin UI</span>
+      </div>
+      <div class="annotation">
+        <p>
+          Company names, product names and code identifiers such as a class
+          called <code>Jordan</code> would otherwise be flagged as people and
+          break answers about the code.
+        </p>
+      </div>
+    </div>
+
+    <div class="column">
+      <div class="def">
+        <span class="name">Country recognisers</span>
+        <span class="type">enabled per company</span>
+      </div>
+      <div class="annotation">
+        <p>
+          Phone, tax and health identifiers differ by country. Admins enable
+          the Presidio recognisers that match their country.
+        </p>
+      </div>
+    </div>
+
+    <div class="column">
+      <div class="def">
+        <span class="name">Tolerant restore</span>
+        <span class="type">case, possessives, leftovers</span>
+      </div>
+      <div class="annotation">
+        <p>
+          The restorer accepts changed case and possessive forms of a
+          placeholder. A placeholder it cannot restore stays visible and is
+          flagged, rather than dropped silently.
+        </p>
+      </div>
+    </div>
+
+    <div class="column">
+      <div class="def">
+        <span class="name">On by default, and visible</span>
+        <span class="type">every provider, Ollama included</span>
+      </div>
+      <div class="annotation">
+        <p>
+          Redaction is on for every provider and an admin can turn it off.
+          Each reply carries a short note when values were hidden, such as
+          "2 names were hidden from the model".
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <p>
+    Detection misses some names, IDs and free text, so redaction lowers the
+    risk without removing it. The evals measure the catch rate, and the
+    detector favours over-redaction when unsure.
+  </p>
+</section>
+
+<section>
+  <h2>Repository access</h2>
+
+  <div class="layer-header">
+    <span class="layer-title">repositories</span>
+  </div>
+  <p class="layer-role">
+    Connects repositories and keeps a local copy of each.
+  </p>
+
+  <div class="group">
+    <div class="group-header">
+      <span class="group-title">sources and refresh</span>
+      <span class="group-count">3 items</span>
+    </div>
+
+    <div class="column">
+      <div class="def">
+        <span class="name">GitHub App install</span>
+        <span class="type"><span class="badge decided">decided</span></span>
+      </div>
+      <div class="annotation">
+        <p>
+          Production source. A <em>Connect GitHub</em> button runs the install
+          flow for the company's own GitHub App, then lists repositories as
+          checkboxes. The bot clones and reads only the ticked ones.
+        </p>
+      </div>
+    </div>
+
+    <div class="column">
+      <div class="def">
+        <span class="name">Public URL or local folder</span>
+        <span class="type"><span class="badge decided">decided</span></span>
+      </div>
+      <div class="annotation">
+        <p>Trial source. Needs no GitHub App.</p>
+      </div>
+    </div>
+
+    <div class="column">
+      <div class="def">
+        <span class="name">Scheduled shallow refresh</span>
+        <span class="type"><span class="badge decided">decided</span></span>
+      </div>
+      <div class="annotation">
+        <p>
+          Shallow clones (<code>--depth 1</code>) pulled on an adjustable
+          interval. Shallow clones save disk and network but drop history, so
+          the bot cannot answer who changed something or when. Webhooks would
+          refresh sooner but need a public URL.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Evals</h2>
+
+  <div class="layer-header">
+    <span class="layer-title">evals</span>
+  </div>
+  <p class="layer-role">
+    Measures retrieval and answers before and after every change.
+    <span class="badge decided">decided</span>
+  </p>
+
+  <div class="group">
+    <div class="group-header">
+      <span class="group-title">eval set</span>
+      <span class="group-count">5 items</span>
+    </div>
+
+    <div class="column">
+      <div class="def">
+        <span class="name">Labelled questions</span>
+        <span class="type">question, correct files, known answer</span>
+      </div>
+      <div class="annotation">
+        <p>
+          Written against a public sample repository, so anyone can run them
+          and the set holds no company data.
+        </p>
+      </div>
+    </div>
+
+    <div class="column">
+      <div class="def">
+        <span class="name">Retrieval metrics</span>
+        <span class="type">recall@k, MRR</span>
+      </div>
+      <div class="annotation">
+        <p>
+          Compares direct, vector and hybrid retrieval, and chunk size and
+          embedding model for vector search. Picks the default retrieval
+          setting.
+        </p>
+      </div>
+    </div>
+
+    <div class="column">
+      <div class="def">
+        <span class="name">Answer metrics</span>
+        <span class="type">faithfulness to source</span>
+      </div>
+      <div class="annotation">
+        <p>Checks each answer against the code it retrieved.</p>
+      </div>
+    </div>
+
+    <div class="column">
+      <div class="def">
+        <span class="name">Cost and latency</span>
+        <span class="type">tokens, cost, seconds per question</span>
+      </div>
+      <div class="annotation">
+        <p>
+          Recorded per run, and in production through optional Langfuse
+          tracing <span class="badge decided">decided</span>.
+        </p>
+      </div>
+    </div>
+
+    <div class="column">
+      <div class="def">
+        <span class="name">Redaction catch rate</span>
+        <span class="type">planted fake PII found</span>
+      </div>
+      <div class="annotation">
+        <p>
+          Text with planted fake names, emails, IDs and secrets, scored on how
+          much the redactor finds and how much code it wrongly flags.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <p>
+    Evals run from the command line. CI runs only the retrieval checks,
+    because answer evals spend tokens and CI runners have no GPU for a local
+    model <span class="badge decided">decided</span>.
+  </p>
+</section>
+
+<section>
+  <h2>Setup and admin</h2>
+
+  <div class="layer-header">
+    <span class="layer-title">admin UI</span>
+  </div>
+  <p class="layer-role">
+    Next.js for setup, administration and trial chat.
+    <span class="badge decided">decided</span>
+  </p>
+
+  <p>
+    Built as a static export with shadcn/ui and Tailwind and served by the
+    FastAPI app, so no Node server runs in production
+    <span class="badge decided">decided</span>. FastAPI provides every API
+    the UI calls, which leaves no use for Next.js server features.
+  </p>
+
+  <div class="group">
+    <div class="group-header">
+      <span class="group-title">setup paths</span>
+      <span class="group-count">2 paths</span>
+    </div>
+
+    <div class="column">
+      <div class="def">
+        <span class="name">Just try it</span>
+        <span class="type"><span class="badge decided">decided</span></span>
+      </div>
+      <div class="annotation">
+        <p>
+          Admin login, model provider, repository URL or folder, then browser
+          chat.
+        </p>
+      </div>
+    </div>
+
+    <div class="column">
+      <div class="def">
+        <span class="name">Full setup</span>
+        <span class="type"><span class="badge decided">decided</span></span>
+      </div>
+      <div class="annotation">
+        <p>
+          Admin login, chat and embedding providers with a connection test,
+          Slack from the manifest, GitHub App and repository selection, then
+          a first question in Slack. Each provider option shows where data is
+          processed.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <h4>Packaging</h4>
+  <p>
+    Docker Compose with two required services, the FastAPI app and Postgres
+    with pgvector, and Langfuse as an optional profile
+    <span class="badge decided">decided</span>. Images publish to GitHub
+    Container Registry. Schema changes use SQLAlchemy and Alembic migrations
+    <span class="badge decided">decided</span>.
+  </p>
+</section>
+
+<section>
+  <h2>Build order</h2>
+  <p class="lede">
+    Seven steps for the first release <span class="badge decided">decided</span>.
+    A walking skeleton comes first, then evals so every later step is
+    measured. The redactor comes before the bot reads a real repository or
+    joins Slack. The folder layout lives in
+    <code>docs/project-structure.md</code>.
+  </p>
+  <table class="summary-table">
+    <thead>
+      <tr><th>Step</th><th>Build</th><th>Result</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>1</td><td>Skeleton: FastAPI health route, Next.js static export served by FastAPI, Postgres with an Alembic baseline, Docker Compose, Makefile. CI waits for the GitHub repository.</td><td><code>make up</code> starts a connected, tested stack locally</td></tr>
+      <tr><td>2</td><td>Evals: labelled questions over a public sample repository, and planted fake PII</td><td>A fixed set that scores every later step</td></tr>
+      <tr><td>3</td><td>Direct retrieval: LangGraph agent with <code>grep</code> and <code>read_file</code></td><td>The bot answers from code on the command line</td></tr>
+      <tr><td>4</td><td>PII redactor: Presidio, placeholders, restore</td><td>No unredacted text reaches a provider</td></tr>
+      <tr><td>5</td><td>Browser chat and trial mode</td><td>The first version other people can try</td></tr>
+      <tr><td>6</td><td>Slack</td><td>The production chat platform</td></tr>
+      <tr><td>7</td><td>Vector retrieval, then a comparison with direct retrieval</td><td>Evals pick the default retrieval setting</td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2>Future scope</h2>
+
+  <div class="layer-header">
+    <span class="layer-title">write actions</span>
+  </div>
+  <p class="layer-role">
+    Capabilities after the read-only first release. None is built yet.
+  </p>
+
+  <div class="group">
+    <div class="group-header">
+      <span class="group-title">capabilities</span>
+      <span class="group-count">3 capabilities</span>
+    </div>
+
+    <div class="column">
+      <div class="def">
+        <span class="name">Create Jira tickets</span>
+        <span class="type"><span class="badge later">later</span></span>
+      </div>
+      <div class="annotation">
+        <p>
+          Turns a chat thread, such as a confirmed bug, into a Jira ticket.
+          Adds a Jira connection to setup and a Jira tool to the agent.
+        </p>
+      </div>
+    </div>
+
+    <div class="column">
+      <div class="def">
+        <span class="name">Prioritise issues</span>
+        <span class="type"><span class="badge later">later</span></span>
+      </div>
+      <div class="annotation">
+        <p>
+          Suggests priority and the code area involved for incoming issues,
+          using the same retrieval tools as question answering.
+        </p>
+      </div>
+    </div>
+
+    <div class="column">
+      <div class="def">
+        <span class="name">Fix bugs</span>
+        <span class="type"><span class="badge later">later</span></span>
+      </div>
+      <div class="annotation">
+        <p>
+          The largest addition. The earlier design ran fixes as background
+          jobs: a queue, a sandbox that clones the repository and runs a
+          coding agent, and a draft pull request at the end. That needs
+          GitHub write access, so the GitHub App gains write permissions for
+          companies that turn it on.
+        </p>
+      </div>
+    </div>
+  </div>
+
+  <div class="callout">
+    <strong>Every write waits for a person.</strong>
+    <span class="badge decided">decided</span>
+    Creating a ticket, changing a priority or opening a pull request happens
+    only after someone presses confirm in the chat thread. The bot first
+    posts a preview of the write. LangGraph's human-in-the-loop interrupt
+    pauses the agent until the button is pressed
+    <span class="badge proposed">proposed</span>.
+  </div>
+
+  <p>
+    The first release reads repository code only. Logs, customer
+    configuration and tickets would help tell a bug from a setup issue, and
+    arrive later as extra agent tools. Each one adds personal data to what
+    reaches the model, so each needs its own privacy review.
+  </p>
+
+  <p>
+    The first release keeps these possible without building them: the agent
+    takes tools from a list, so a Jira tool is one more entry, and the
+    adapter boundary already carries replies back to the thread.
+  </p>
+</section>
+
+<section>
+  <h2>Skills learned</h2>
+
+  <p class="lede">
+    The project mainly teaches AI engineering: building products on top of
+    models. It covers little ML engineering, which trains and serves the
+    models themselves.
+  </p>
+
+  <div class="group">
+    <div class="group-header">
+      <span class="group-title">skill areas</span>
+      <span class="group-count">6 areas</span>
+    </div>
+
+    <div class="column">
+      <div class="def">
+        <span class="name">AI engineering</span>
+        <span class="type">the core of the project</span>
+      </div>
+      <div class="annotation">
+        <p>
+          Agent design with tool use in LangGraph. Retrieval: chunking,
+          embeddings, pgvector, hybrid search, and comparing direct against
+          vector retrieval. Evals: labelled sets, recall@k, MRR, faithfulness.
+          Working across providers, controlling cost and latency with token
+          limits and prompt caching, tracing with Langfuse, conversation
+          memory with the Postgres checkpointer, and running local models
+          with Ollama.
+        </p>
+      </div>
+    </div>
+
+    <div class="column">
+      <div class="def">
+        <span class="name">Data privacy and security</span>
+        <span class="type">provider and secrets choices</span>
+      </div>
+      <div class="annotation">
+        <p>
+          Data residency and region selection, including Bedrock in-region
+          and cross-region inference. Reversible PII redaction with Presidio:
+          detection, typed placeholders, per-thread mappings and restore. Encrypted secrets that never return to
+          the browser. PII trade-offs. Least-privilege access through GitHub
+          Apps and IAM roles.
+        </p>
+      </div>
+    </div>
+
+    <div class="column">
+      <div class="def">
+        <span class="name">Backend and integrations</span>
+        <span class="type">FastAPI app</span>
+      </div>
+      <div class="annotation">
+        <p>
+          FastAPI, SQLAlchemy and Alembic, Postgres with pgvector, Slack Bolt
+          with Socket Mode and app manifests, GitHub App authentication and
+          repository syncing, and an adapter design that admits a second
+          chat platform.
+        </p>
+      </div>
+    </div>
+
+    <div class="column">
+      <div class="def">
+        <span class="name">Frontend</span>
+        <span class="type">admin UI</span>
+      </div>
+      <div class="annotation">
+        <p>
+          Building the admin UI as a static Next.js site, and designing a
+          setup wizard for non-technical users.
+        </p>
+      </div>
+    </div>
+
+    <div class="column">
+      <div class="def">
+        <span class="name">Shipping and open source</span>
+        <span class="type">packaging and documentation</span>
+      </div>
+      <div class="annotation">
+        <p>
+          Docker Compose and images on GHCR, GitHub Actions CI with evals,
+          setup documentation a stranger can follow, and design documents,
+          ADRs and specs.
+        </p>
+      </div>
+    </div>
+
+    <div class="column">
+      <div class="def">
+        <span class="name">Not covered</span>
+        <span class="type">ML engineering</span>
+      </div>
+      <div class="annotation">
+        <p>
+          Training and fine-tuning models, data labelling pipelines at scale,
+          GPU serving, and MLOps such as drift monitoring and retraining.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>Design principles</h2>
+  <ol class="principles">
+    <li>
+      <strong>Slack first, and no more scope than the first release needs.</strong>
+      The adapter boundary keeps Teams possible. Nothing for Teams is built
+      until Slack works.
+    </li>
+    <li>
+      <strong>The safe setup is the easy setup.</strong>
+      The admin UI states where each provider processes data, so a
+      non-technical admin makes the location choice knowingly.
+    </li>
+    <li>
+      <strong>One set of settings, two ways to write it.</strong>
+      Environment variables and the admin UI write the same settings, so a
+      technical host and a non-technical admin end up with the same system.
+    </li>
+    <li>
+      <strong>Measure before changing.</strong>
+      The eval set exists before the retrieval code it scores, so every
+      change shows up as a number.
+    </li>
+    <li>
+      <strong>Industry-standard tools over custom code.</strong>
+      Where a widely used library covers a need, use it. A self-hoster's team
+      is more likely to know it, and the maintainer learns tools companies
+      hire for.
+    </li>
+  </ol>
+</section>
+
+<section>
+  <h2>Summary</h2>
+  <table class="summary-table">
+    <thead>
+      <tr><th>Area</th><th>Choice</th><th>Status</th></tr>
+    </thead>
+    <tbody>
+      <tr><td>Backend</td><td>FastAPI (Python)</td><td><span class="badge decided">decided</span></td></tr>
+      <tr><td>Agent</td><td>LangGraph</td><td><span class="badge decided">decided</span></td></tr>
+      <tr><td>Retrieval</td><td>Direct and vector, chosen by setting</td><td><span class="badge decided">decided</span></td></tr>
+      <tr><td>Evals</td><td>Labelled set: retrieval, answers, cost</td><td><span class="badge decided">decided</span></td></tr>
+      <tr><td>Admin UI</td><td>Next.js, includes trial browser chat</td><td><span class="badge decided">decided</span></td></tr>
+      <tr><td>Chat platform</td><td>Slack; Teams later</td><td><span class="badge decided">decided</span></td></tr>
+      <tr><td>Data location</td><td>Chosen by each hosting company</td><td><span class="badge decided">decided</span></td></tr>
+      <tr><td>Scope</td><td>Read-only questions in the first release</td><td><span class="badge decided">decided</span></td></tr>
+      <tr><td>PII redaction</td><td>Typed placeholders on every provider call, restored in replies</td><td><span class="badge decided">decided</span></td></tr>
+      <tr><td>PII detection</td><td>Microsoft Presidio with spaCy, inside the app container</td><td><span class="badge decided">decided</span></td></tr>
+      <tr><td>Sources read</td><td>Repository code only; logs, configuration and tickets later as extra tools</td><td><span class="badge decided">decided</span></td></tr>
+      <tr><td>Licence</td><td>MIT, in the first public commit</td><td><span class="badge decided">decided</span></td></tr>
+      <tr><td>Future scope</td><td>Jira tickets, issue prioritisation, bug fixing</td><td><span class="badge later">later</span></td></tr>
+      <tr><td>Write actions</td><td>Each waits for a confirm button in the thread</td><td><span class="badge decided">decided</span></td></tr>
+      <tr><td>Database</td><td>Postgres with pgvector, SQLAlchemy, Alembic</td><td><span class="badge decided">decided</span></td></tr>
+      <tr><td>Providers</td><td>LangChain chat and embedding integrations</td><td><span class="badge decided">decided</span></td></tr>
+      <tr><td>Slack</td><td>Bolt for Python, Socket Mode</td><td><span class="badge decided">decided</span></td></tr>
+      <tr><td>GitHub</td><td>GitHub App, scheduled shallow clones</td><td><span class="badge decided">decided</span></td></tr>
+      <tr><td>Frontend build</td><td>Static export, shadcn/ui, Tailwind</td><td><span class="badge decided">decided</span></td></tr>
+      <tr><td>Tracing</td><td>Langfuse, optional</td><td><span class="badge decided">decided</span></td></tr>
+      <tr><td>Packaging</td><td>Docker Compose: app and Postgres; GHCR</td><td><span class="badge decided">decided</span></td></tr>
+    </tbody>
+  </table>
+</section>
+
+<section>
+  <h2>Open questions</h2>
+  <ul class="open-questions">
+    <li>
+      <strong>Eval framework.</strong>
+      Ragas or promptfoo. Not chosen.
+    </li>
+    <li>
+      <strong>How a production install is first started.</strong>
+      A one-click deploy on a hosting site, or a server that IT provides.
+      Hosted deploy buttons often default to a US region.
+    </li>
+    <li>
+      <strong>Audit log and admin history.</strong>
+      Whether the first release records who asked what. The earlier design
+      required a full audit log. This design has not decided.
+    </li>
+    <li>
+      <strong>Where bug fixing stops.</strong>
+      The earlier design ended bug fixes at a draft pull request that a
+      person reviews and merges. This design has not yet decided whether
+      that rule carries over.
+    </li>
+    <li>
+      <strong>Project name.</strong>
+      The repository is called <code>dev-slack-bot</code>, which no longer
+      fits a multi-platform bot.
+    </li>
+  </ul>
+</section>
+
+</body>
+</html>
