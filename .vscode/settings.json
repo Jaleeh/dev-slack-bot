@@ -1,0 +1,14 @@
+{
+  "files.exclude": {
+    "**/.ruff_cache": true,
+    "**/.mypy_cache": true,
+    "**/.pytest_cache": true,
+    "**/__pycache__": true,
+    "**/.venv": true,
+    "**/node_modules": true,
+    "**/.next": true,
+    "frontend/out": true,
+    "**/*.tsbuildinfo": true,
+    "**/next-env.d.ts": true
+  }
+}
