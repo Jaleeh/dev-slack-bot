@@ -31,7 +31,7 @@ Get a working local dev setup before any bot features exist. One command starts 
 - Langfuse and the optional Compose profile.
 - Publishing images to GHCR.
 - Feature folders with no code yet (`agent/`, `retrieval/`, `privacy/`, `repos/`, `chat/`, `providers/`). Create each one in the step that first needs it.
-- Hot reload inside containers. Code changes are picked up by running `make up` again.
+- Hot reload inside containers. `make dev` gives hot reload by running the backend and frontend on the host instead.
 
 ## Anti-goals
 
@@ -80,6 +80,7 @@ The database check runs `SELECT 1` with a short timeout, so the page doesn't han
 | Target | Does |
 |---|---|
 | `make up` | Copies `.env.example` to `.env` if `.env` is missing, then `docker compose up --build` |
+| `make dev` | Postgres in Docker; backend (`uvicorn --reload`) and frontend (`next dev`, proxying `/api`) on the host with hot reload. Added after the first build. |
 | `make down` | `docker compose down` |
 | `make logs` | Follows the Compose logs |
 | `make migrate` | Runs `alembic upgrade head` in the app container |
@@ -114,7 +115,7 @@ These follow [project-structure.md](../project-structure.md#tests). There is alm
   - The Alembic baseline upgrades and downgrades cleanly.
 - **Frontend** (Vitest): the status page shows connected for an ok response, down for a 503, and backend down when the request fails. Mock `fetch` at the edge.
 - Tests run on the host. `make test` starts `db` if needed, then runs `uv run pytest` and `pnpm test`. The host needs uv and pnpm for tests. `make up` only needs Docker.
-- Tests use their own database, `dev_slack_bot_test`, on the same Postgres container, so they never touch dev data. `make test` creates it if it is missing, so it also works on a volume that existed before this step. Tests connect through `TEST_DATABASE_URL`, which defaults to `localhost:5432`, while the app's `DATABASE_URL` uses the Compose host `db`. *Our call.*
+- Tests use their own database, `dev_slack_bot_test`, on the same Postgres container, so they never touch dev data. The test suite creates it if it is missing, so it also works on a volume that existed before this step. Tests connect through `TEST_DATABASE_URL`, which defaults to `localhost:5432`, while the app's `DATABASE_URL` uses the Compose host `db`. *Our call.*
 
 ## Docs to update when this step is done
 

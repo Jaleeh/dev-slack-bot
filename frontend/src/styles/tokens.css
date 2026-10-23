@@ -1,0 +1,20 @@
+/* Design tokens, taken from design-doc.html so the admin UI and the docs read as one project. */
+:root {
+  --doc-bg: #fbfaf7;
+  --doc-fg: #1c1c1c;
+  --doc-muted: #6a6a6a;
+  --doc-rule: #e3e0d8;
+  --doc-accent: #2a5f7f;
+  --doc-accent-soft: #e8f0f4;
+  --doc-code-bg: #f2f0e9;
+  --doc-badge-green-bg: #e2ecde;
+  --doc-badge-green-fg: #3d5a32;
+  --doc-badge-amber-bg: #f3ead0;
+  --doc-badge-amber-fg: #6b5a1f;
+
+  --font-stack-sans:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue",
+    Arial, sans-serif;
+  --font-stack-mono:
+    "SF Mono", Monaco, Menlo, Consolas, "Liberation Mono", monospace;
+}
