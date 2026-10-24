@@ -67,12 +67,12 @@ def test_a_lookalike_outside_the_value_is_allowed() -> None:
         kind="code",
         text='ALLOWED_HOSTS = ["example.com"]\nSUPPORT_EMAIL = "jane.roe@example.com"\n',
         planted=[planted("EMAIL", "jane.roe@example.com")],
-        lookalikes=["example.com", "ALLOWED_HOSTS"],
+        lookalikes=['["example.com"]', "ALLOWED_HOSTS"],
     )
 
     pii_set = PiiSet.model_validate(a_pii_set(settings_file))
 
-    assert pii_set.snippets[0].lookalikes == ("example.com", "ALLOWED_HOSTS")
+    assert pii_set.snippets[0].lookalikes == ('["example.com"]', "ALLOWED_HOSTS")
 
 
 def test_a_name_inside_another_planted_value_is_allowed() -> None:
@@ -126,6 +126,32 @@ def test_loaded_snippets_cannot_be_changed() -> None:
             a_snippet(lookalikes=["example.com"]),
             r"'example\.com' is not in the text outside planted values",
             id="look-alike only inside a value",
+        ),
+        pytest.param(
+            a_snippet(
+                text="Hosts: example.com. Mail jane.roe@example.com.",
+                planted=[planted("EMAIL", "jane.roe@example.com")],
+                lookalikes=["example.com"],
+            ),
+            r"'example\.com' appears more than once in the text",
+            id="look-alike also inside a value",
+        ),
+        pytest.param(
+            a_snippet(
+                text="Hits from 192.0.2.20 and 192.0.2.200.",
+                planted=[planted("IP", "192.0.2.20"), planted("IP", "192.0.2.200")],
+            ),
+            r"'192\.0\.2\.20' overlaps another planted value",
+            id="value is part of another value",
+        ),
+        pytest.param(
+            a_snippet(
+                text="John Doe paid on 2 Oct and again on 2 Oct.",
+                planted=[planted("PERSON", "John Doe")],
+                lookalikes=["2 Oct"],
+            ),
+            r"'2 Oct' appears more than once in the text",
+            id="look-alike repeated",
         ),
         pytest.param(
             a_snippet(
