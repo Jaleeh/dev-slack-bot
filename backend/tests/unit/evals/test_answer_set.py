@@ -5,9 +5,9 @@ import pytest
 import yaml
 from pydantic import ValidationError
 
-from evals.answer_set import AnswerSet, load_answer_set
+from evals.answer_set import ANSWERS_PATH, AnswerSet, load_answer_set
 from evals.dataset_file import InvalidDataset
-from evals.question_set import QuestionSet
+from evals.question_set import QUESTIONS_PATH, QuestionSet, load_question_set
 from tests.answer_datasets import (
     CODE,
     EVERY_KIND,
@@ -106,3 +106,9 @@ def test_a_kind_used_once_is_rejected() -> None:
         AnswerSet.model_validate(
             an_answer_set(an_entry(), an_entry(question_id="q2", wrong=without_vague))
         )
+
+
+def test_the_planted_answer_set_loads() -> None:
+    answer_set = load_answer_set(ANSWERS_PATH, load_question_set(QUESTIONS_PATH))
+
+    assert len(answer_set.answers) == 10
