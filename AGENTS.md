@@ -8,7 +8,7 @@
 
 | Document | What it covers |
 |---|---|
-| [`design-doc.html`](design-doc.html) | Architecture: layers, constraints, decisions, build order, open questions |
+| [`docs/design-doc.html`](docs/design-doc.html) | Architecture: layers, constraints, decisions, build order, open questions |
 | [`docs/tech-stack.md`](docs/tech-stack.md) | Every tool, its purpose, and what was rejected. Living: update it when a tool changes. |
 | [`docs/project-structure.md`](docs/project-structure.md) | Folder layout, import direction, test layout. Living: update it when the tree moves. |
 | [`docs/adrs/`](docs/adrs/) | Architectural decision records |

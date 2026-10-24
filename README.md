@@ -4,7 +4,7 @@ A self-hosted chat bot that answers questions about your GitHub repositories, so
 
 Ask it in Slack how a business rule works, or whether a reported problem is a bug or a setup issue. It reads your code and replies in the thread. It never changes code.
 
-> **Status:** step 1 (skeleton) is built: a status page showing the backend and database are connected. See the [architecture design doc](design-doc.html) for what comes next.
+> **Status:** step 1 (skeleton) is built: a status page showing the backend and database are connected. See the [architecture design doc](docs/design-doc.html) for what comes next.
 
 ## Quick start
 
@@ -104,7 +104,7 @@ FastAPI, LangGraph, Postgres with pgvector, Presidio, Slack Bolt and Next.js, pa
 
 ## Documentation
 
-- [Architecture design doc](design-doc.html): system shape, constraints, decisions and open questions
+- [Architecture design doc](docs/design-doc.html): system shape, constraints, decisions and open questions
 - [Tech stack](docs/tech-stack.md): every tool, its purpose, and what was rejected
 - [Project structure](docs/project-structure.md): folder layout, import rules, test layout
 - [`docs/adrs/`](docs/adrs/): architectural decision records

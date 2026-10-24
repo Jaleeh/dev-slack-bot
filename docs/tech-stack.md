@@ -2,7 +2,7 @@
 
 Every tool the project uses, what it is for, and what was rejected. This is the single list: other documents link here instead of copying it. Update it in the same change that adds, removes or swaps a tool.
 
-The reasoning behind the larger choices lives in the [design doc](../design-doc.html). Where code lives is in [project-structure.md](project-structure.md).
+The reasoning behind the larger choices lives in the [design doc](design-doc.html). Where code lives is in [project-structure.md](project-structure.md).
 
 Versions: the newest stable release of each tool that works with the rest. Exact versions live in the lockfiles.
 
