@@ -11,9 +11,9 @@ from statistics import fmean
 import yaml
 from pydantic import AwareDatetime, BaseModel, ConfigDict
 
+from evals.dataset_file import InvalidDataset
 from evals.question_set import (
     QUESTIONS_PATH,
-    InvalidQuestionSet,
     Question,
     QuestionSet,
     load_question_set,
@@ -87,7 +87,7 @@ def main(config: RunConfig = DEFAULT_CONFIG) -> int:
     try:
         run = evaluate(config, AnswerKeyRetriever)
     except (
-        InvalidQuestionSet,
+        InvalidDataset,
         yaml.YAMLError,
         SampleRepoError,
         MissingFiles,

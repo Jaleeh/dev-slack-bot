@@ -1,32 +1,16 @@
 """The labelled question set that retrieval and answers are scored against."""
 
-from collections import Counter
 from pathlib import Path, PurePosixPath
-from typing import Annotated, Any, Literal, Self
+from typing import Annotated, Literal, Self
 
-import yaml
-from pydantic import (
-    AfterValidator,
-    BaseModel,
-    ConfigDict,
-    Field,
-    StringConstraints,
-    ValidationError,
-    model_validator,
-)
+from pydantic import AfterValidator, Field, model_validator
+
+from evals.dataset_file import DatasetModel, Text, check_unique_ids, load_dataset
 
 QUESTIONS_PATH = Path(__file__).parent / "datasets" / "questions.yaml"
 
 # Developer-speak makes a question test grep rather than understanding.
 CODE_MARKERS = ("_", "`", ".py", "()")
-
-
-class InvalidQuestionSet(ValueError):
-    """A question set file broke the format; each problem names its entry by id."""
-
-    def __init__(self, problems: tuple[str, ...]) -> None:
-        super().__init__("\n".join(problems))
-        self.problems = problems
 
 
 def _check_repo_path(path: str) -> str:
@@ -53,13 +37,10 @@ def _check_plain_wording(question: str) -> str:
     return question
 
 
-Text = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 RepoPath = Annotated[Text, AfterValidator(_check_repo_path)]
 
 
-class Question(BaseModel):
-    model_config = ConfigDict(frozen=True, extra="forbid")
-
+class Question(DatasetModel):
     id: Text
     type: Literal["how_it_works", "bug_or_setup"]
     question: Annotated[Text, AfterValidator(_check_plain_wording)]
@@ -67,9 +48,7 @@ class Question(BaseModel):
     files: Annotated[tuple[RepoPath, ...], Field(min_length=1, max_length=4)]
 
 
-class QuestionSet(BaseModel):
-    model_config = ConfigDict(frozen=True, extra="forbid")
-
+class QuestionSet(DatasetModel):
     version: Literal[1]
     repo: Text
     ref: Text
@@ -77,38 +56,10 @@ class QuestionSet(BaseModel):
 
     @model_validator(mode="after")
     def _check_unique_ids(self) -> Self:
-        counts = Counter(question.id for question in self.questions)
-        duplicates = sorted(id_ for id_, count in counts.items() if count > 1)
-        if duplicates:
-            raise ValueError(f"duplicated ids: {', '.join(duplicates)}")
+        check_unique_ids(question.id for question in self.questions)
 
         return self
 
 
 def load_question_set(path: Path) -> QuestionSet:
-    """Raises InvalidQuestionSet on a format problem, yaml.YAMLError on unparseable YAML."""
-    data = yaml.safe_load(path.read_text(encoding="utf-8"))
-
-    try:
-        return QuestionSet.model_validate(data)
-    except ValidationError as error:
-        problems = tuple(_describe(problem, data) for problem in error.errors())
-        raise InvalidQuestionSet(problems) from error
-
-
-def _describe(problem: Any, data: Any) -> str:
-    location = ".".join(str(part) for part in problem["loc"])
-
-    match problem["loc"]:
-        case ("questions", int(index), *_):
-            return f"{_entry_name(data, index)} ({location}): {problem['msg']}"
-        case _:
-            return f"{location}: {problem['msg']}"
-
-
-def _entry_name(data: Any, index: int) -> str:
-    entry = data["questions"][index]
-    if isinstance(entry, dict) and entry.get("id"):
-        return str(entry["id"])
-
-    return f"entry {index + 1}"
+    return load_dataset(path, QuestionSet)
