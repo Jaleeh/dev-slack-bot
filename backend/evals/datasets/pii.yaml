@@ -1,0 +1,240 @@
+# Fake personal data for scoring redactors. Every value is invented and drawn from
+# ranges reserved for examples; see the step 2 spec, section "2.4 PII set".
+version: 1
+snippets:
+  - id: checkout-blocked
+    kind: question
+    text: "Why can't John Doe (john.doe@example.com, 07700 900123) check out? The page for order 100042 just keeps loading."
+    planted:
+      - { type: PERSON, value: "John Doe" }
+      - { type: EMAIL, value: "john.doe@example.com" }
+      - { type: PHONE, value: "07700 900123" }
+    lookalikes: ["100042"]
+
+  - id: refund-call
+    kind: question
+    text: "Jane Roe rang on 020 7946 0321 asking where the refund for order 100517 is. How long do refunds take to show up?"
+    planted:
+      - { type: PERSON, value: "Jane Roe" }
+      - { type: PHONE, value: "020 7946 0321" }
+    lookalikes: ["100517"]
+
+  - id: card-declined
+    kind: question
+    text: "Marisol Quenby says the card 4111 1111 1111 1111 keeps getting declined, but the bank says it's fine. The parcel is needed by 3 March. What can stop a card going through?"
+    planted:
+      - { type: PERSON, value: "Marisol Quenby" }
+      - { type: CARD, value: "4111 1111 1111 1111" }
+    lookalikes: ["3 March"]
+
+  - id: address-change
+    kind: question
+    text: "Kwame Ashbury-Tetteh has moved to 14 Larkspur Mews, Mirrowfold and wants future orders sent there. The account email is kwame.at@example.org. Can the delivery address be changed for orders already placed?"
+    planted:
+      - { type: PERSON, value: "Kwame Ashbury-Tetteh" }
+      - { type: ADDRESS, value: "14 Larkspur Mews, Mirrowfold" }
+      - { type: EMAIL, value: "kwame.at@example.org" }
+    lookalikes: []
+
+  - id: age-check
+    kind: question
+    text: "Siobhan Falloway, date of birth 12/04/1987, can't buy an item marked 18+. The order was tried on 12/09/2026. Why is it blocked?"
+    planted:
+      - { type: PERSON, value: "Siobhan Falloway" }
+      - { type: DATE_OF_BIRTH, value: "12/04/1987" }
+    lookalikes: ["12/09/2026"]
+
+  - id: staff-discount
+    kind: question
+    text: "Our employee Ravi Thistlecombe (NI number QQ 12 34 56 C, ravi.t@example.com) isn't getting the staff discount at checkout. What decides who gets it?"
+    planted:
+      - { type: PERSON, value: "Ravi Thistlecombe" }
+      - { type: UK_NINO, value: "QQ 12 34 56 C" }
+      - { type: EMAIL, value: "ravi.t@example.com" }
+    lookalikes: []
+
+  - id: voucher-email
+    kind: question
+    text: "A customer at mei.harrowgate@example.net never got the voucher we promised for the 28 November sale. Where would that email have gone?"
+    planted:
+      - { type: EMAIL, value: "mei.harrowgate@example.net" }
+    lookalikes: ["28 November"]
+
+  - id: locked-out
+    kind: question
+    text: "Since we moved to version 4.2.1, the customer lena.okafor@example.org says they get locked out after logging in from 203.0.113.42. Is there a limit on login attempts?"
+    planted:
+      - { type: EMAIL, value: "lena.okafor@example.org" }
+      - { type: IP, value: "203.0.113.42" }
+    lookalikes: ["4.2.1"]
+
+  - id: double-charge
+    kind: question
+    text: "A customer was charged twice on card 5555 5555 5555 4444 for order 100873. Please call back on +44 7700 900456. Why would one order take payment twice?"
+    planted:
+      - { type: CARD, value: "5555 5555 5555 4444" }
+      - { type: PHONE, value: "+44 7700 900456" }
+    lookalikes: ["100873"]
+
+  - id: out-of-stock
+    kind: question
+    text: "Since the 4.2.1 upgrade on 2 October, some products show as out of stock even though the warehouse has them. What decides whether something is in stock?"
+    planted: []
+    lookalikes: ["4.2.1", "2 October"]
+
+  - id: gift-delivery
+    kind: question
+    text: "Tomasz Brennick ordered a gift to go to 7 Quillon Terrace, Thornquay, paid with card 3782 822463 10005. Can a gift go to a different address from the card's?"
+    planted:
+      - { type: PERSON, value: "Tomasz Brennick" }
+      - { type: ADDRESS, value: "7 Quillon Terrace, Thornquay" }
+      - { type: CARD, value: "3782 822463 10005" }
+    lookalikes: []
+
+  - id: account-merge
+    kind: question
+    text: "One customer has two accounts, jane.roe@example.com and jroe@example.net, both with the phone number +44 20 7946 0888. Can the two accounts be joined?"
+    planted:
+      - { type: EMAIL, value: "jane.roe@example.com" }
+      - { type: EMAIL, value: "jroe@example.net" }
+      - { type: PHONE, value: "+44 20 7946 0888" }
+    lookalikes: []
+
+  - id: settings-email
+    kind: code
+    text: |
+      ALLOWED_HOSTS = ["example.com"]
+      OSCAR_FROM_EMAIL = "bea.okafor@example.com"
+    planted:
+      - { type: EMAIL, value: "bea.okafor@example.com" }
+    lookalikes: ["example.com", "ALLOWED_HOSTS"]
+
+  - id: settings-aws
+    kind: code
+    text: |
+      # Product images
+      AWS_ACCESS_KEY_ID = "AKIAIOSFODNN7EXAMPLE"
+      AWS_SECRET_ACCESS_KEY = "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY"
+      AWS_STORAGE_BUCKET_NAME = "oscar-media"
+      AWS_S3_CUSTOM_DOMAIN = "media.example.org"
+    planted:
+      - { type: SECRET, value: "AKIAIOSFODNN7EXAMPLE" }
+      - { type: SECRET, value: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY" }
+    lookalikes: ["AWS_ACCESS_KEY_ID", "AWS_STORAGE_BUCKET_NAME", "example.org"]
+
+  - id: env-file
+    kind: code
+    text: |
+      DATABASE_URL=postgres://oscar:fake-db-password-0000@db:5432/oscar
+      DJANGO_SECRET_KEY=fake-django-secret-key-not-real-0123456789
+      DEBUG=False
+    planted:
+      - { type: SECRET, value: "fake-db-password-0000" }
+      - { type: SECRET, value: "fake-django-secret-key-not-real-0123456789" }
+    lookalikes: ["DATABASE_URL", "DJANGO_SECRET_KEY"]
+
+  - id: address-fixture
+    kind: code
+    text: |
+      {
+        "full_name": "Ada Pemberton-Okoro",
+        "user_email": "ada.po@example.com",
+        "phone_number": "+44 7700 900789",
+        "line1": "22 Wrenfield Close"
+      }
+    planted:
+      - { type: PERSON, value: "Ada Pemberton-Okoro" }
+      - { type: EMAIL, value: "ada.po@example.com" }
+      - { type: PHONE, value: "+44 7700 900789" }
+      - { type: ADDRESS, value: "22 Wrenfield Close" }
+    lookalikes: ["user_email", "phone_number"]
+
+  - id: order-log
+    kind: code
+    text: "2026-10-02 14:03:11 INFO order 100231 placed by tunde.ashcombe@example.net from 192.0.2.17"
+    planted:
+      - { type: EMAIL, value: "tunde.ashcombe@example.net" }
+      - { type: IP, value: "192.0.2.17" }
+    lookalikes: ["100231", "2026-10-02"]
+
+  - id: payment-log
+    kind: code
+    text: "DEBUG payment: order=100388 card=4242 4242 4242 4242 client_ip=198.51.100.23 status=declined"
+    planted:
+      - { type: CARD, value: "4242 4242 4242 4242" }
+      - { type: IP, value: "198.51.100.23" }
+    lookalikes: ["100388"]
+
+  - id: git-log
+    kind: code
+    text: |
+      commit a3f9c2e1b7d4058e6f21c9d0b8a7e6f5d4c3b2a1
+      Author: Jane Roe <jane.roe@example.com>
+      Date:   2026-09-30
+
+          Fix voucher rounding at checkout
+    planted:
+      - { type: PERSON, value: "Jane Roe" }
+      - { type: EMAIL, value: "jane.roe@example.com" }
+    lookalikes: ["a3f9c2e1b7d4058e6f21c9d0b8a7e6f5d4c3b2a1", "2026-09-30"]
+
+  - id: todo-comment
+    kind: code
+    text: |
+      def shipping_charge(basket, phone_number=None):
+          # TODO: ask Priya Vandermeer (020 7946 0555) whether VAT applies to shipping
+    planted:
+      - { type: PERSON, value: "Priya Vandermeer" }
+      - { type: PHONE, value: "020 7946 0555" }
+    lookalikes: ["phone_number"]
+
+  - id: staff-csv
+    kind: code
+    text: |
+      name,ni_number,date_of_birth
+      Lowri Castellane,QQ 98 76 54 A,1990-07-21
+      Hamza Ellingworth,QQ 11 22 33 B,1985-02-14
+    planted:
+      - { type: PERSON, value: "Lowri Castellane" }
+      - { type: UK_NINO, value: "QQ 98 76 54 A" }
+      - { type: DATE_OF_BIRTH, value: "1990-07-21" }
+      - { type: PERSON, value: "Hamza Ellingworth" }
+      - { type: UK_NINO, value: "QQ 11 22 33 B" }
+      - { type: DATE_OF_BIRTH, value: "1985-02-14" }
+    lookalikes: ["date_of_birth"]
+
+  - id: ticket-json
+    kind: code
+    text: |
+      {"ticket": 4471, "customer": "Dmitri Okonkwo-Hale", "dob": "03/11/1979", "address": "9 Fennimore Row, Pellickvale", "issue": "parcel not delivered"}
+    planted:
+      - { type: PERSON, value: "Dmitri Okonkwo-Hale" }
+      - { type: DATE_OF_BIRTH, value: "03/11/1979" }
+      - { type: ADDRESS, value: "9 Fennimore Row, Pellickvale" }
+    lookalikes: []
+
+  - id: access-log
+    kind: code
+    text: |
+      203.0.113.88 - - [02/Oct/2026:09:14:02 +0000] "GET /basket/ HTTP/1.1" 200 5123
+      192.0.2.200 - - [02/Oct/2026:09:14:05 +0000] "POST /checkout/ HTTP/1.1" 302 0
+    planted:
+      - { type: IP, value: "203.0.113.88" }
+      - { type: IP, value: "192.0.2.200" }
+    lookalikes: ["02/Oct/2026", "/basket/"]
+
+  - id: migration-note
+    kind: code
+    text: |
+      # Backfill user_email on orders placed before 4.2.1.
+      # Introduced in e5b1c0d9; skips order 100999, which was a test order.
+    planted: []
+    lookalikes: ["4.2.1", "e5b1c0d9", "100999", "user_email"]
+
+  - id: requirements
+    kind: code
+    text: |
+      django-oscar==4.2.1
+      # pinned at 7c2e9f41 until the voucher fix lands
+    planted: []
+    lookalikes: ["4.2.1", "7c2e9f41"]
