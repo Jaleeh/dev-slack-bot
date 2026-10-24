@@ -1330,6 +1330,7 @@ h4 {
     Evals run from the command line. CI runs only the retrieval checks,
     because answer evals spend tokens and CI runners have no GPU for a local
     model <span class="badge decided">decided</span>.
+    Scoring is hand-written (ADR-001) <span class="badge decided">decided</span>.
   </p>
 </section>
 
@@ -1677,10 +1678,6 @@ h4 {
 <section>
   <h2>Open questions</h2>
   <ul class="open-questions">
-    <li>
-      <strong>Eval framework.</strong>
-      Ragas or promptfoo. Not chosen.
-    </li>
     <li>
       <strong>How a production install is first started.</strong>
       A one-click deploy on a hosting site, or a server that IT provides.

@@ -45,7 +45,7 @@ test: db ## Run backend and frontend tests (needs uv and pnpm on the host)
 	cd frontend && pnpm test
 
 lint: ## Run linters, type checks and format checks
-	cd backend && uv run ruff check . && uv run ruff format --check . && uv run mypy app tests alembic
+	cd backend && uv run ruff check . && uv run ruff format --check . && uv run mypy
 	cd frontend && pnpm lint && pnpm typecheck && pnpm format:check
 
 fmt: ## Format backend and frontend code

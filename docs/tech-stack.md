@@ -33,7 +33,7 @@ Versions: the newest stable release of each tool that works with the rest. Exact
 | Types | mypy | TypeScript strict |
 | Tests | pytest | Vitest |
 
-Evals score a labelled question set on recall@k, MRR, faithfulness, redaction catch rate, cost and latency. The framework (Ragas or promptfoo) is chosen in step 2.
+Evals score a labelled question set on recall@k, MRR, faithfulness, redaction catch rate, cost and latency. Scoring is hand-written ([ADR-001](adrs/adr-001-how-answers-and-retrieval-are-evaluated.md)). Ragas may be added later as a cross-check.
 
 ## Packaging and CI
 

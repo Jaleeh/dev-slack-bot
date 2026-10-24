@@ -28,7 +28,7 @@ Which solution was chosen and why
 
 ADR numbers are assigned in the order ADRs are created, not by topic.
 
-None yet.
+- [ADR-001: How answers and retrieval are evaluated](adr-001-how-answers-and-retrieval-are-evaluated.md)
 
 ## Key considerations
 
