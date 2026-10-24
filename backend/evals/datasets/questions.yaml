@@ -288,7 +288,7 @@ questions:
   # --- Bug or setup ---
   - id: voucher-guest-rejected
     type: bug_or_setup
-    question: "A customer checking out as a guest says their voucher code is rejected, but it works for other people. Is that a bug or a setup issue?"
+    question: "A customer checking out as a guest says their voucher code is rejected, but it works for other people. Why?"
     key_facts:
       - "It's a setup issue, not a bug."
       - "The voucher is set to 'once per customer'."
@@ -300,7 +300,7 @@ questions:
 
   - id: voucher-not-valid-yet
     type: bug_or_setup
-    question: "On launch day, customers are told a new voucher code is not active. Is that a bug or a setup issue?"
+    question: "It's launch day and customers are being told our new voucher code is not active. What's going on?"
     key_facts:
       - "It's a setup issue, not a bug."
       - "A voucher only works between its start and end date and time."
@@ -312,7 +312,7 @@ questions:
 
   - id: promotion-not-applying
     type: bug_or_setup
-    question: "A sale is running, but one product that should be in it isn't getting the discount. Is that a bug or a setup issue?"
+    question: "A sale is running, but one product that should be in it isn't getting the discount. Why not?"
     key_facts:
       - "It's most likely a setup issue, not a bug."
       - "A sale only covers the products on its product list."
@@ -323,7 +323,7 @@ questions:
 
   - id: cannot-buy-product
     type: bug_or_setup
-    question: "A product shows on the site but customers can't add it to their basket. Is that a bug or a setup issue?"
+    question: "A product shows on the site but customers can't add it to their basket. Why?"
     key_facts:
       - "It's most likely a setup issue, not a bug."
       - "A product can't be bought until stock has been set up for it."
@@ -336,7 +336,7 @@ questions:
 
   - id: only-free-delivery
     type: bug_or_setup
-    question: "Customers only ever see free delivery at checkout, even for heavy orders. Is that a bug or a setup issue?"
+    question: "Customers only ever see free delivery at checkout, even for heavy orders. Why?"
     key_facts:
       - "It's a setup issue, not a bug."
       - "Out of the box, free delivery is the only option."
@@ -347,7 +347,7 @@ questions:
 
   - id: status-change-blocked
     type: bug_or_setup
-    question: "Staff get an error when they try to move an order to a status they need. Is that a bug or a setup issue?"
+    question: "Staff get an error when they try to move an order to a status they need. Why?"
     key_facts:
       - "It's a setup issue, not a bug."
       - "An order can only move to the statuses the shop's settings allow from its current status."
