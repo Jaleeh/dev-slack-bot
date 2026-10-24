@@ -23,9 +23,11 @@ It's a fixed, public Django codebase, so every retrieval method gets scored agai
 
 ## Running
 
-`make eval` downloads [django-oscar](https://github.com/django-oscar/django-oscar) at a fixed tag into `.cache/` on the first run. It then scores a retriever on the question set, prints a summary, and saves the numbers and the setup that produced them to `results/`. Both folders are git-ignored. It needs uv and git, and no model or database.
+`make eval` downloads [django-oscar](https://github.com/django-oscar/django-oscar) at a fixed tag into `.cache/` on the first run. It then scores a retriever on the question set and a redactor on the fake personal data, prints a summary, and saves the numbers and the setup that produced them to `results/`. Both folders are git-ignored. It needs uv and git, and no model or database.
 
-Until the bot exists, it scores a stand-in that returns the answer key, so every score is 1.000. That proves the scoring works from start to finish.
+Until the bot exists, it scores a retriever stand-in that returns the answer key, so every retrieval score is 1.000. That proves the scoring works from start to finish.
+
+Until Presidio is added, the redactor is a stand-in that changes nothing. Its catch rate (the share of planted personal data removed) is 0.000, and its wrong-flag rate (the share of look-alikes wrongly removed) is 0.000.
 
 ## Files
 
@@ -39,7 +41,9 @@ Until the bot exists, it scores a stand-in that returns the answer key, so every
 | `retrieval_metrics.py` | recall@k and reciprocal rank |
 | `sample_repo.py` | Downloads the sample repository once and reuses it |
 | `retriever.py` | The hook a retrieval method plugs into, and the answer-key stand-in |
-| `runner.py` | Runs a retriever over the questions, scores it and saves the results |
+| `pii_metrics.py` | Catch rate and wrong-flag rate |
+| `redactor.py` | The hook a redactor plugs into, and the do-nothing and answer-key stand-ins |
+| `runner.py` | Runs a retriever over the questions and a redactor over the personal data, scores both and saves the results |
 
 ## More
 
