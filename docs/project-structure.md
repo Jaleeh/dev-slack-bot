@@ -2,7 +2,7 @@
 
 Where code lives and which way imports point. This is a living document: update it in the same change that moves the tree.
 
-> **Status:** partly built. Built so far: `backend/app/{main.py,api,config,db}`, `backend/alembic`, `backend/tests/{unit,integration}`, `frontend/`, `Dockerfile`, `docker-compose.yml` and `Makefile`. Each remaining folder is created in the [build order](../design-doc.html) step that first needs it.
+> **Status:** partly built. Built so far: `backend/app/{main.py,api,config,db}`, `backend/alembic`, `backend/evals/` (retrieval metrics only so far), `backend/tests/{unit,integration}`, `frontend/`, `Dockerfile`, `docker-compose.yml` and `Makefile`. Each remaining folder is created in the [build order](../design-doc.html) step that first needs it.
 
 ## Layout
 

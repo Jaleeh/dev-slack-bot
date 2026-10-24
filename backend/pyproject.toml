@@ -28,10 +28,11 @@ select = ["E", "F", "I", "B", "UP", "SIM"]
 
 [tool.ruff.lint.isort]
 # The local alembic/ folder would otherwise shadow the alembic package.
-known-first-party = ["app"]
+known-first-party = ["app", "evals"]
 known-third-party = ["alembic"]
 
 [tool.mypy]
+files = ["app", "evals", "tests", "alembic"]
 strict = true
 plugins = ["pydantic.mypy"]
 
