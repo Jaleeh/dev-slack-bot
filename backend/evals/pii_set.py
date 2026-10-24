@@ -149,6 +149,12 @@ def _text_problems(snippet: Snippet) -> tuple[str, ...]:
             for lookalike in snippet.lookalikes
             if lookalike not in outside
         ),
+        # Scoring checks a look-alike is still in the output, so one copy must be all there is.
+        *(
+            f"{lookalike!r} appears more than once in the text"
+            for lookalike in snippet.lookalikes
+            if snippet.text.count(lookalike) > 1
+        ),
         *_reused_name_words(snippet, outside),
     )
 
@@ -167,15 +173,18 @@ def _repeated(items: Iterable[str]) -> tuple[str, ...]:
 
 
 def _overlapping(values: list[str], text: str) -> tuple[str, ...]:
-    """Values that vanish once the others are masked, so no redactor can remove both cleanly."""
+    """Values inside or sharing text with another, which scoring couldn't tell apart."""
     distinct = dict.fromkeys(values)
 
-    return tuple(
-        value
-        for value in distinct
-        if value in text
-        and value not in _mask(text, (other for other in distinct if other != value))
-    )
+    return tuple(value for value in distinct if _overlaps_another(value, distinct, text))
+
+
+def _overlaps_another(value: str, distinct: Iterable[str], text: str) -> bool:
+    others = [other for other in distinct if other != value]
+    if any(value in other for other in others):
+        return True
+
+    return value in text and value not in _mask(text, others)
 
 
 def _reused_name_words(snippet: Snippet, outside: str) -> tuple[str, ...]:

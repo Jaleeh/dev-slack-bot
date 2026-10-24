@@ -107,7 +107,7 @@ snippets:
       OSCAR_FROM_EMAIL = "bea.okafor@example.com"
     planted:
       - { type: EMAIL, value: "bea.okafor@example.com" }
-    lookalikes: ["example.com", "ALLOWED_HOSTS"]
+    lookalikes: ['["example.com"]', "ALLOWED_HOSTS"]
 
   - id: settings-aws
     kind: code
@@ -221,7 +221,7 @@ snippets:
     planted:
       - { type: IP, value: "203.0.113.88" }
       - { type: IP, value: "192.0.2.200" }
-    lookalikes: ["02/Oct/2026", "/basket/"]
+    lookalikes: ["02/Oct/2026:09:14:02", "/basket/"]
 
   - id: migration-note
     kind: code
