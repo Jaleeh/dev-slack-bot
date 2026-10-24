@@ -1,0 +1,130 @@
+"""Grades an answer with yes/no questions to a judge model, and decides if the grader was right."""
+
+from collections.abc import Sequence
+from typing import Literal
+
+from langchain_core.exceptions import OutputParserException
+from langchain_core.language_models import BaseChatModel, LanguageModelInput
+from langchain_core.runnables import Runnable
+from pydantic import BaseModel, ConfigDict, ValidationError
+
+from evals.answer_set import FAITHFULNESS, WrongAnswer, fact_check
+from evals.question_set import Question
+
+FACT_PROMPT = """\
+You are checking an answer given to a non-technical person about how an online shop works.
+Question: {question}
+Answer: {answer}
+Fact: {fact}
+Does the answer state this fact? The wording may differ, but the meaning must match. \
+Reply yes or no."""
+
+FAITHFULNESS_PROMPT = """\
+You are checking an answer against the shop's code it was based on.
+Code:
+{code}
+Question: {question}
+Answer: {answer}
+Does the answer claim anything this code doesn't support? Reply yes or no."""
+
+RETRY_NUDGE = "Reply with only yes or no."
+
+Reply = Literal["yes", "no"]
+CheckOutcome = Literal["pass", "fail", "ungraded"]
+Outcome = Literal["right", "wrong", "inconclusive"]
+StructuredJudge = Runnable[LanguageModelInput, object]
+
+
+class Verdict(BaseModel):
+    answer: Reply
+
+
+class CheckResult(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    check: str
+    outcome: CheckOutcome
+
+
+class Grade(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    checks: tuple[CheckResult, ...]
+
+    @property
+    def fact_score(self) -> float:
+        return fact_score(self.checks)
+
+
+def fact_score(checks: Sequence[CheckResult]) -> float:
+    """Share of facts stated; an ungraded fact counts as not stated."""
+    facts = [check for check in checks if check.check != FAITHFULNESS]
+
+    return sum(check.outcome == "pass" for check in facts) / len(facts)
+
+
+def grade(judge: BaseChatModel, question: Question, answer: str, code: str) -> Grade:
+    """Checks each key fact in order, then faithfulness."""
+    structured = judge.with_structured_output(Verdict)
+    faithfulness_prompt = FAITHFULNESS_PROMPT.format(
+        code=code, question=question.question, answer=answer
+    )
+
+    facts = tuple(
+        CheckResult(
+            check=fact_check(number),
+            outcome=_outcome(
+                _ask(
+                    structured,
+                    FACT_PROMPT.format(question=question.question, answer=answer, fact=fact),
+                ),
+                passing="yes",
+            ),
+        )
+        for number, fact in enumerate(question.key_facts, start=1)
+    )
+    faithfulness = CheckResult(
+        check=FAITHFULNESS,
+        outcome=_outcome(_ask(structured, faithfulness_prompt), passing="no"),
+    )
+
+    return Grade(checks=(*facts, faithfulness))
+
+
+def outcome_for_correct(result: Grade) -> Outcome:
+    if _has_ungraded(result):
+        return "inconclusive"
+
+    return "right" if all(check.outcome == "pass" for check in result.checks) else "wrong"
+
+
+def outcome_for_wrong(result: Grade, wrong: WrongAnswer) -> Outcome:
+    if _has_ungraded(result):
+        return "inconclusive"
+
+    outcomes = {check.check: check.outcome for check in result.checks}
+
+    return "right" if outcomes[wrong.fails] == "fail" else "wrong"
+
+
+def _ask(structured: StructuredJudge, prompt: str) -> Verdict | None:
+    """Retries an unreadable reply once, asking more plainly; None means still unreadable."""
+    for attempt in (prompt, f"{prompt}\n{RETRY_NUDGE}"):
+        try:
+            return Verdict.model_validate(structured.invoke(attempt))
+        # Other providers may return None or a bare dict instead of raising.
+        except OutputParserException, ValidationError:
+            pass
+
+    return None
+
+
+def _outcome(verdict: Verdict | None, passing: Reply) -> CheckOutcome:
+    if verdict is None:
+        return "ungraded"
+
+    return "pass" if verdict.answer == passing else "fail"
+
+
+def _has_ungraded(result: Grade) -> bool:
+    return any(check.outcome == "ungraded" for check in result.checks)

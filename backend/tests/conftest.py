@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 
+import httpx
 import pytest
 from fastapi.testclient import TestClient
 
@@ -8,6 +9,7 @@ from app.config.settings import Settings
 from app.main import create_app
 from tests.support import ClientFactory, ensure_database_exists
 
+OLLAMA_REACHABILITY_TIMEOUT_SECONDS = 1
 DEFAULT_TEST_DATABASE_URL = "postgresql+psycopg://devbot:devbot@localhost:5432/dev_slack_bot_test"
 
 
@@ -29,3 +31,35 @@ def client_for_database(tmp_path: Path) -> ClientFactory:
 @pytest.fixture
 def client(client_for_database: ClientFactory, test_database_url: str) -> TestClient:
     return client_for_database(test_database_url)
+
+
+@pytest.fixture(scope="session")
+def ollama_url() -> str:
+    """The configured Ollama URL; skips the test when nothing answers there."""
+    # Imported here so test runs that never touch a model don't load LangChain.
+    from evals.settings import EvalSettings
+
+    url = EvalSettings().ollama_base_url
+    try:
+        httpx.get(url, timeout=OLLAMA_REACHABILITY_TIMEOUT_SECONDS)
+    except httpx.HTTPError:
+        pytest.skip(f"Ollama not reachable at {url}")
+
+    return url
+
+
+@pytest.fixture(scope="session")
+def ollama_judge(ollama_url: str) -> str:
+    """The configured judge model; skips the test unless Ollama has it pulled."""
+    from evals.settings import OLLAMA_PREFIX, EvalSettings
+
+    model = EvalSettings().judge_model
+    if not model.startswith(OLLAMA_PREFIX):
+        pytest.skip(f"judge model {model} is not an Ollama model")
+
+    name = model.removeprefix(OLLAMA_PREFIX)
+    pulled = {entry["name"] for entry in httpx.get(f"{ollama_url}/api/tags").json()["models"]}
+    if not {name, f"{name}:latest"} & pulled:
+        pytest.skip(f"{name} is not pulled; run: ollama pull {name}")
+
+    return model

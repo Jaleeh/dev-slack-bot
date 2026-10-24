@@ -29,12 +29,19 @@ Until the bot exists, it scores a retriever stand-in that returns the answer key
 
 Until Presidio is added, the redactor is a stand-in that changes nothing. Its catch rate (the share of planted personal data removed) is 0.000, and its wrong-flag rate (the share of look-alikes wrongly removed) is 0.000.
 
+## Grading answers
+
+`make eval-answers` checks the answer grader itself. A local model reads planted answers from `datasets/wrong_answers.yaml` and answers yes or no: does the answer state each key fact, and does it claim anything the code doesn't support? A trustworthy grader passes every correct answer and fails every planted wrong one on the check it was written to fail. A check whose reply can't be read twice in a row is recorded as ungraded, never as a pass.
+
+It needs Ollama running with the model pulled (see the main README), and takes several minutes. It prints whether the grader got each answer right and saves the run, including which model graded it, to `results/answers-<time>.json`. `CHAT_MODEL`, `EVAL_JUDGE_MODEL` and `OLLAMA_BASE_URL` in `.env` choose the model.
+
 ## Files
 
 | File | Holds |
 |---|---|
 | `datasets/questions.yaml` | The labelled questions, with the facts and files each answer needs |
 | `datasets/pii.yaml` | Fake personal data planted in short texts, and look-alikes a redactor must leave alone |
+| `datasets/wrong_answers.yaml` | Right and planted wrong answers to some of the questions, with the code each is based on |
 | `dataset_file.py` | Loads a dataset file and names each badly formed entry by its id |
 | `question_set.py` | Loads the questions and rejects badly formed entries |
 | `pii_set.py` | Loads the fake personal data and rejects badly formed or real-looking entries |
@@ -44,6 +51,11 @@ Until Presidio is added, the redactor is a stand-in that changes nothing. Its ca
 | `pii_metrics.py` | Catch rate and wrong-flag rate |
 | `redactor.py` | The hook a redactor plugs into, and the do-nothing and answer-key stand-ins |
 | `runner.py` | Runs a retriever over the questions and a redactor over the personal data, scores both and saves the results |
+| `run_record.py` | Reads the commit each run's numbers came from |
+| `settings.py` | Which model grades answers, read from `.env` |
+| `answer_set.py` | Loads the planted answers and rejects badly formed entries |
+| `grader.py` | Asks the model one yes/no question per check and decides whether the grader got an answer right |
+| `answer_runner.py` | Grades every planted answer and saves the results |
 
 ## More
 
