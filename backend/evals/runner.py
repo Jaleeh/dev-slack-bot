@@ -1,6 +1,5 @@
 """Scores a retriever and a redactor against the eval sets and records the run."""
 
-import subprocess
 import sys
 import time
 from collections.abc import Callable, Mapping
@@ -23,9 +22,16 @@ from evals.question_set import (
 from evals.redactor import NoRedactor, Redactor
 from evals.retrieval_metrics import recall_at_k, reciprocal_rank
 from evals.retriever import AnswerKeyRetriever, Retriever
+from evals.run_record import (
+    EVALS_DIR,
+    TIMESTAMP_FORMAT,
+    RepoCommitError,
+    format_rows,
+    git_commit,
+    stop,
+    write_record,
+)
 from evals.sample_repo import REPO_URLS, SampleRepo, SampleRepoError, fetch_sample_repo
-
-EVALS_DIR = Path(__file__).parent
 
 
 class RunConfig(BaseModel):
@@ -94,10 +100,6 @@ class RunResult(BaseModel):
     pii: PiiResult
 
 
-class RepoCommitError(RuntimeError):
-    pass
-
-
 class MissingFiles(Exception):
     def __init__(self, paths: tuple[str, ...]) -> None:
         super().__init__(
@@ -117,8 +119,7 @@ def main(config: RunConfig = DEFAULT_CONFIG) -> int:
         MissingFiles,
         RepoCommitError,
     ) as error:
-        print(f"eval stopped: {error}", file=sys.stderr)
-        return 1
+        return stop("eval", error)
 
     path = save(run, config.results_dir)
     print(format_summary(run, path))
@@ -138,15 +139,14 @@ def format_summary(run: RunResult, path: Path) -> str:
         ("wrong flags", _format_rate(run.pii.metrics.wrong_flag_rate)),
         ("results", str(path)),
     ]
-    width = max(len(label) for label, _ in rows)
 
-    return "\n".join(f"{label:<{width}}  {value}" for label, value in rows)
+    return format_rows(rows)
 
 
 def evaluate(config: RunConfig, contenders: Contenders) -> RunResult:
     """Raises before scoring on a bad dataset, failed fetch, missing file or unknown commit."""
     started_at = datetime.now(UTC)
-    git_commit = _git_commit()
+    commit = git_commit()
     question_set = load_question_set(config.questions_path)
     pii_set = load_pii_set(config.pii_path)
 
@@ -161,7 +161,7 @@ def evaluate(config: RunConfig, contenders: Contenders) -> RunResult:
 
     return RunResult(
         started_at=started_at,
-        git_commit=git_commit,
+        git_commit=commit,
         dataset_version=question_set.version,
         repo=question_set.repo,
         ref=question_set.ref,
@@ -173,12 +173,7 @@ def evaluate(config: RunConfig, contenders: Contenders) -> RunResult:
 
 
 def save(run: RunResult, results_dir: Path) -> Path:
-    results_dir.mkdir(parents=True, exist_ok=True)
-    path = results_dir / f"{run.started_at:%Y%m%dT%H%M%SZ}.json"
-
-    path.write_text(run.model_dump_json(indent=2) + "\n", encoding="utf-8")
-
-    return path
+    return write_record(run, results_dir / f"{run.started_at:{TIMESTAMP_FORMAT}}.json")
 
 
 def _sample_repo(question_set: QuestionSet, repo_urls: Mapping[str, str]) -> SampleRepo:
@@ -239,24 +234,6 @@ def _run_pii_set(redactor: Redactor, pii_set: PiiSet) -> PiiResult:
 
 def _format_rate(rate: float | None) -> str:
     return "n/a" if rate is None else f"{rate:.3f}"
-
-
-def _git_commit() -> str:
-    commit = _git("rev-parse", "HEAD")
-
-    # A run from uncommitted code can't be reproduced from the commit alone.
-    return f"{commit}-dirty" if _git("status", "--porcelain") else commit
-
-
-def _git(*args: str) -> str:
-    try:
-        completed = subprocess.run(
-            ["git", *args], cwd=EVALS_DIR, check=True, capture_output=True, text=True
-        )
-    except (FileNotFoundError, subprocess.CalledProcessError) as error:
-        raise RepoCommitError(f"could not read this repo's commit: {error}") from error
-
-    return completed.stdout.strip()
 
 
 if __name__ == "__main__":
