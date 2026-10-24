@@ -52,5 +52,5 @@ fmt: ## Format backend and frontend code
 	cd backend && uv run ruff format .
 	cd frontend && pnpm format
 
-eval: ## Score retrieval on the eval question set (fetches the sample repo on first run)
+eval: ## Score retrieval and PII redaction on the eval sets (fetches the sample repo on first run)
 	cd backend && uv run python -m evals.runner

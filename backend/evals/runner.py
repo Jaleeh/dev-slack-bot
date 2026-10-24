@@ -1,4 +1,4 @@
-"""Scores a retriever against the question set and records the run."""
+"""Scores a retriever and a redactor against the eval sets and records the run."""
 
 import subprocess
 import sys
@@ -12,12 +12,15 @@ import yaml
 from pydantic import AwareDatetime, BaseModel, ConfigDict
 
 from evals.dataset_file import InvalidDataset
+from evals.pii_metrics import PiiMetrics, SnippetResult, pii_metrics, score_snippet
+from evals.pii_set import PII_PATH, PiiSet, load_pii_set
 from evals.question_set import (
     QUESTIONS_PATH,
     Question,
     QuestionSet,
     load_question_set,
 )
+from evals.redactor import NoRedactor, Redactor
 from evals.retrieval_metrics import recall_at_k, reciprocal_rank
 from evals.retriever import AnswerKeyRetriever, Retriever
 from evals.sample_repo import REPO_URLS, SampleRepo, SampleRepoError, fetch_sample_repo
@@ -29,12 +32,23 @@ class RunConfig(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     questions_path: Path = QUESTIONS_PATH
+    pii_path: Path = PII_PATH
     cache_dir: Path = EVALS_DIR / ".cache"
     results_dir: Path = EVALS_DIR / "results"
     repo_urls: Mapping[str, str] = REPO_URLS
 
 
 DEFAULT_CONFIG = RunConfig()
+
+
+class Contenders(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    build_retriever: Callable[[QuestionSet], Retriever]
+    build_redactor: Callable[[PiiSet], Redactor]
+
+
+STAND_INS = Contenders(build_retriever=AnswerKeyRetriever, build_redactor=lambda _: NoRedactor())
 
 
 class QuestionResult(BaseModel):
@@ -57,6 +71,15 @@ class Metrics(BaseModel):
     mrr: float
 
 
+class PiiResult(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    dataset_version: int
+    redactor: str
+    metrics: PiiMetrics
+    snippets: tuple[SnippetResult, ...]
+
+
 class RunResult(BaseModel):
     model_config = ConfigDict(frozen=True)
 
@@ -68,6 +91,7 @@ class RunResult(BaseModel):
     retriever: str
     metrics: Metrics
     questions: tuple[QuestionResult, ...]
+    pii: PiiResult
 
 
 class RepoCommitError(RuntimeError):
@@ -83,9 +107,9 @@ class MissingFiles(Exception):
 
 
 def main(config: RunConfig = DEFAULT_CONFIG) -> int:
-    """Scores the answer-key stand-in; returns the process exit code."""
+    """Scores the stand-ins; returns the process exit code."""
     try:
-        run = evaluate(config, AnswerKeyRetriever)
+        run = evaluate(config, STAND_INS)
     except (
         InvalidDataset,
         yaml.YAMLError,
@@ -109,6 +133,9 @@ def format_summary(run: RunResult, path: Path) -> str:
         ("recall@5", f"{run.metrics.recall_at_5:.3f}"),
         ("recall@10", f"{run.metrics.recall_at_10:.3f}"),
         ("MRR", f"{run.metrics.mrr:.3f}"),
+        ("redactor", run.pii.redactor),
+        ("catch rate", _format_rate(run.pii.metrics.catch_rate)),
+        ("wrong flags", _format_rate(run.pii.metrics.wrong_flag_rate)),
         ("results", str(path)),
     ]
     width = max(len(label) for label, _ in rows)
@@ -116,19 +143,21 @@ def format_summary(run: RunResult, path: Path) -> str:
     return "\n".join(f"{label:<{width}}  {value}" for label, value in rows)
 
 
-def evaluate(config: RunConfig, build_retriever: Callable[[QuestionSet], Retriever]) -> RunResult:
-    """Raises before scoring on a bad question set, failed fetch, missing file or unknown commit."""
+def evaluate(config: RunConfig, contenders: Contenders) -> RunResult:
+    """Raises before scoring on a bad dataset, failed fetch, missing file or unknown commit."""
     started_at = datetime.now(UTC)
     git_commit = _git_commit()
     question_set = load_question_set(config.questions_path)
+    pii_set = load_pii_set(config.pii_path)
 
     clone = fetch_sample_repo(_sample_repo(question_set, config.repo_urls), config.cache_dir)
     missing = _missing_files(question_set, clone)
     if missing:
         raise MissingFiles(missing)
 
-    retriever = build_retriever(question_set)
+    retriever = contenders.build_retriever(question_set)
     results = tuple(_run_question(retriever, question) for question in question_set.questions)
+    pii = _run_pii_set(contenders.build_redactor(pii_set), pii_set)
 
     return RunResult(
         started_at=started_at,
@@ -139,6 +168,7 @@ def evaluate(config: RunConfig, build_retriever: Callable[[QuestionSet], Retriev
         retriever=retriever.name,
         metrics=_mean_metrics(results),
         questions=results,
+        pii=pii,
     )
 
 
@@ -193,6 +223,22 @@ def _mean_metrics(results: tuple[QuestionResult, ...]) -> Metrics:
         recall_at_10=fmean(result.recall_at_10 for result in results),
         mrr=fmean(result.reciprocal_rank for result in results),
     )
+
+
+def _run_pii_set(redactor: Redactor, pii_set: PiiSet) -> PiiResult:
+    snippets = pii_set.snippets
+    results = tuple(score_snippet(snippet, redactor.redact(snippet.text)) for snippet in snippets)
+
+    return PiiResult(
+        dataset_version=pii_set.version,
+        redactor=redactor.name,
+        metrics=pii_metrics(snippets, results),
+        snippets=results,
+    )
+
+
+def _format_rate(rate: float | None) -> str:
+    return "n/a" if rate is None else f"{rate:.3f}"
 
 
 def _git_commit() -> str:
