@@ -15,6 +15,12 @@ This folder is not part of the app. The Docker image doesn't include it.
 
 Runs record numbers only. Pass marks come later, once there are real numbers to set them from.
 
+## The sample repository
+
+django-oscar is a stand-in codebase for the bot to search. None of its code is committed, and nothing outside this folder uses it. Each question in `datasets/questions.yaml` lists the oscar files that hold its answer. A retriever scores well when those files come back near the top.
+
+It's a fixed, public Django codebase, so every retrieval method gets scored against the same files and the scores can be compared fairly.
+
 ## Running
 
 `make eval` downloads [django-oscar](https://github.com/django-oscar/django-oscar) at a fixed tag into `.cache/` on the first run. It then scores a retriever on the question set, prints a summary, and saves the numbers and the setup that produced them to `results/`. Both folders are git-ignored. It needs uv and git, and no model or database.
