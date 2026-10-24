@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help up dev db down logs migrate test lint fmt
+.PHONY: help up dev db down logs migrate test lint fmt eval
 
 # Make creates .env from the example first if it is missing, then re-reads it.
 -include .env
@@ -51,3 +51,6 @@ lint: ## Run linters, type checks and format checks
 fmt: ## Format backend and frontend code
 	cd backend && uv run ruff format .
 	cd frontend && pnpm format
+
+eval: ## Score retrieval on the eval question set (fetches the sample repo on first run)
+	cd backend && uv run python -m evals.runner
