@@ -1,0 +1,624 @@
+# Planted answers that test the answer grader, not the bot.
+# Each entry has an answer that states every key fact and nothing outside its code,
+# and wrong answers that each fail one named check:
+#   wrong_rule      states a rule the code contradicts      -> the fact it contradicts
+#   made_up_detail  states every fact plus an invented rule  -> faithfulness
+#   vague           says nothing the asker can act on        -> fact-1
+#   other_question  correctly answers a different question   -> fact-1
+# `code` is a hand-picked excerpt from django-oscar 4.2.1, one "# <path>" line per file.
+version: 1
+answers:
+  # --- Offers ---
+  - question_id: offer-order
+    code: |
+      # src/oscar/apps/offer/abstract_models.py
+          # Some complicated situations require offers to be applied in a set order.
+          priority = models.IntegerField(
+              _("Priority"),
+              default=0,
+              db_index=True,
+              help_text=_("The highest priority offers are applied first"),
+          )
+      # src/oscar/apps/offer/applicator.py
+          def get_offers(self, basket, user=None, request=None):
+              """
+              Return all offers to apply to the basket.
+              """
+              site_offers = self.get_site_offers()
+              basket_offers = self.get_basket_offers(basket, user)
+              user_offers = self.get_user_offers(user)
+              session_offers = self.get_session_offers(request)
+
+              return list(
+                  sorted(
+                      chain(session_offers, basket_offers, user_offers, site_offers),
+                      key=lambda o: o.priority,
+                      reverse=True,
+                  )
+              )
+
+          def get_basket_offers(self, basket, user):
+              """
+              Return basket-linked offers such as those associated with a voucher
+              code
+              """
+    correct: >-
+      Every promotion has a priority number, and the one with the highest priority is
+      applied first. Promotions start with a priority of 0 unless someone changes it.
+      If two promotions have the same priority, a promotion that comes from a voucher
+      code goes before a site-wide sale.
+    wrong:
+      - kind: wrong_rule
+        fails: fact-1
+        answer: >-
+          Every promotion has a priority number, and the one with the lowest number is
+          applied first. Promotions start at 0 unless someone changes it. If two have
+          the same priority, a voucher's promotion goes before a site-wide sale.
+      - kind: made_up_detail
+        fails: faithfulness
+        answer: >-
+          Every promotion has a priority number, and the highest priority is applied
+          first. Promotions start with a priority of 0 unless someone changes it. If two
+          have the same priority, a voucher's promotion goes before a site-wide sale.
+          The priority can't be set higher than 10.
+
+  - question_id: offer-repeat
+    code: |
+      # src/oscar/apps/offer/applicator.py
+          def apply_offers(self, basket, offers):
+              applications = OfferApplications()
+              for offer in offers:
+                  num_applications = 0
+                  # Keep applying the offer until either
+                  # (a) We reach the max number of applications for the offer.
+                  # (b) The benefit can't be applied successfully.
+                  while num_applications < offer.get_max_applications(basket.owner):
+                      result = offer.apply_benefit(basket)
+                      num_applications += 1
+                      if not result.is_successful:
+                          break
+                      applications.add(offer, result)
+                      if result.is_final:
+                          break
+      # src/oscar/apps/offer/benefits.py
+      class MultibuyDiscountBenefit(Benefit):
+          _description = _("Cheapest product from %(range)s is free")
+
+          def apply(self, basket, condition, offer, **kwargs):
+              line_tuples = self.get_applicable_lines(offer, basket)
+              if not line_tuples:
+                  return ZERO_DISCOUNT
+
+              # Cheapest line gives free product
+              discount, line = line_tuples[0]
+              if line.quantity_with_offer_discount(offer) == 0:
+                  apply_discount(line, discount, 1, offer)
+
+                  affected_lines = [(line, discount, 1)]
+                  condition.consume_items(offer, basket, affected_lines)
+
+                  return BasketDiscount(discount)
+              else:
+                  return ZERO_DISCOUNT
+      # src/oscar/apps/offer/abstract_models.py
+              # We sort lines to be cheapest first to ensure consistent applications
+              return sorted(line_tuples, key=operator.itemgetter(0))
+    correct: >-
+      The customer gets one free item per basket, however many they buy. The free item
+      is the cheapest one in the deal.
+    wrong:
+      - kind: wrong_rule
+        fails: fact-1
+        answer: >-
+          The customer gets one free item for every three they buy, so six items get
+          two free. Each free item is the cheapest one in the deal.
+      - kind: vague
+        fails: fact-1
+        answer: >-
+          It depends on how the deal has been set up, so it's worth checking the
+          promotion's settings.
+
+  # --- Vouchers ---
+  - question_id: voucher-dates
+    code: |
+      # src/oscar/apps/voucher/abstract_models.py
+          start_datetime = models.DateTimeField(_("Start datetime"), db_index=True)
+          end_datetime = models.DateTimeField(_("End datetime"), db_index=True)
+
+          def is_active(self, test_datetime=None):
+              """
+              Test whether this voucher is currently active.
+              """
+              test_datetime = test_datetime or timezone.now()
+              return self.start_datetime <= test_datetime <= self.end_datetime
+
+          def is_expired(self):
+              """
+              Test whether this voucher has passed its expiration date
+              """
+              now = timezone.now()
+              return self.end_datetime < now
+      # src/oscar/apps/basket/views.py
+          def apply_voucher_to_basket(self, voucher):
+              if voucher.is_expired():
+                  messages.error(
+                      self.request,
+                      _("The '%(code)s' voucher has expired") % {"code": voucher.code},
+                  )
+                  return
+
+              if not voucher.is_active():
+                  messages.error(
+                      self.request,
+                      _("The '%(code)s' voucher is not active") % {"code": voucher.code},
+                  )
+                  return
+    correct: >-
+      A voucher only works between its start date and time and its end date and time,
+      and every voucher must have both. If a customer uses it after the end date,
+      they're told the voucher has expired. If they use it before the start date,
+      they're told the voucher isn't active.
+    wrong:
+      - kind: made_up_detail
+        fails: faithfulness
+        answer: >-
+          A voucher only works between its start and end date and time, and every
+          voucher must have both. After the end date the customer is told it has
+          expired, and before the start date they're told it isn't active. Customers
+          are also emailed a reminder the day before a voucher expires.
+      - kind: other_question
+        fails: fact-1
+        answer: >-
+          A customer checking out as a guest can't use a voucher that's set to once per
+          customer. They need to sign in first.
+
+  - question_id: voucher-guest-rejected
+    code: |
+      # src/oscar/apps/voucher/abstract_models.py
+          SINGLE_USE, MULTI_USE, ONCE_PER_CUSTOMER = (
+              "Single use",
+              "Multi-use",
+              "Once per customer",
+          )
+          USAGE_CHOICES = (
+              (SINGLE_USE, _("Can be used once by one customer")),
+              (MULTI_USE, _("Can be used multiple times by multiple customers")),
+              (ONCE_PER_CUSTOMER, _("Can only be used once per customer")),
+          )
+          usage = models.CharField(
+              _("Usage"), max_length=128, choices=USAGE_CHOICES, default=MULTI_USE
+          )
+
+          def is_available_to_user(self, user=None):
+              is_available, message = False, ""
+              if self.usage == self.SINGLE_USE:
+                  is_available = not self.applications.exists()
+                  if not is_available:
+                      message = _("This voucher has already been used")
+              elif self.usage == self.MULTI_USE:
+                  is_available = True
+              elif self.usage == self.ONCE_PER_CUSTOMER:
+                  if not user.is_authenticated:
+                      is_available = False
+                      message = _("This voucher is only available to signed in users")
+                  else:
+                      is_available = not self.applications.filter(
+                          voucher=self, user=user
+                      ).exists()
+                      if not is_available:
+                          message = _(
+                              "You have already used this voucher in a previous order"
+                          )
+              return is_available, message
+      # src/oscar/apps/basket/views.py
+              is_available, message = voucher.is_available_to_user(self.request.user)
+              if not is_available:
+                  messages.error(self.request, message)
+                  return
+    correct: >-
+      It's a setup issue, not a bug. The voucher is set to "once per customer", and
+      those vouchers only work for customers who are signed in, so a guest is turned
+      away. Fix: ask the customer to sign in, or change the voucher so it can be used
+      by anyone.
+    wrong:
+      - kind: wrong_rule
+        fails: fact-1
+        answer: >-
+          It's a bug. The voucher is set to "once per customer", and the shop wrongly
+          refuses those for guests even though they should work. Fix: report it to the
+          developers.
+      - kind: made_up_detail
+        fails: faithfulness
+        answer: >-
+          It's a setup issue, not a bug. The voucher is set to "once per customer", and
+          those vouchers only work for customers who are signed in. Fix: ask the
+          customer to sign in, or change how the voucher can be used. Guests can also
+          use it if they enter the email address it was sent to.
+
+  # --- Basket ---
+  - question_id: basket-login-merge
+    code: |
+      # src/oscar/apps/basket/middleware.py
+              if hasattr(request, "user") and request.user.is_authenticated:
+                  # Signed-in user: if they have a cookie basket too, it means
+                  # that they have just signed in and we need to merge their cookie
+                  # basket into their user basket, then delete the cookie.
+                  basket, __ = manager.get_or_create(owner=request.user)
+
+                  if cookie_basket:
+                      # count number of items in the basket
+                      num_items_merged += cookie_basket.num_items
+                      self.merge_baskets(basket, cookie_basket)
+                      request.cookies_to_delete.append(cookie_key)
+
+                      ngettext_lazy(
+                          "We have merged %(num_items_merged)d item from a "
+                          "previous session to your basket.",
+                          "We have merged %(num_items_merged)d items from a "
+                          "previous session to your basket.",
+                          num_items_merged,
+                      )
+
+          def merge_baskets(self, master, slave):
+              master.merge(slave, add_quantities=False)
+      # src/oscar/apps/basket/abstract_models.py
+          def merge_line(self, line, add_quantities=True):
+              try:
+                  existing_line = self.lines.get(line_reference=line.line_reference)
+              except ObjectDoesNotExist:
+                  # Line does not already exist - reassign its basket
+                  line.basket = self
+                  line.save()
+              else:
+                  # Line already exists - assume the max quantity is correct and
+                  # delete the old
+                  if add_quantities:
+                      existing_line.quantity += line.quantity
+                  else:
+                      existing_line.quantity = max(existing_line.quantity, line.quantity)
+                  existing_line.save()
+                  line.delete()
+
+          def merge(self, basket, add_quantities=True):
+              for line_to_merge in basket.lines.all():
+                  self.merge_line(line_to_merge, add_quantities)
+              # Ensure all vouchers are moved to the new basket
+              for voucher in basket.vouchers.all():
+                  basket.vouchers.remove(voucher)
+                  self.vouchers.add(voucher)
+    correct: >-
+      When the shopper signs in, the items from their guest basket are moved into
+      their own basket. If the same item is in both, they keep whichever quantity is
+      larger; the two quantities aren't added together. Any vouchers they added come
+      across too, and they see a message saying how many items were moved.
+    wrong:
+      - kind: wrong_rule
+        fails: fact-2
+        answer: >-
+          When the shopper signs in, the items from their guest basket are moved into
+          their own basket. If the same item is in both, the two quantities are added
+          together. Any vouchers come across too, and they see a message saying how
+          many items were moved.
+      - kind: vague
+        fails: fact-1
+        answer: >-
+          Something happens to the basket when they sign in. It's best to check the
+          basket afterwards.
+
+  # --- Shipping ---
+  - question_id: shipping-weight
+    code: |
+      # src/oscar/apps/shipping/abstract_models.py
+          # The default weight to use (in kg) when a product doesn't have a weight
+          # attribute.
+          default_weight = models.DecimalField(
+              _("Default Weight"),
+              decimal_places=3,
+              max_digits=12,
+              default=D("0.000"),
+              help_text=_("Default product weight in kg when no weight attribute is defined"),
+          )
+
+          def calculate(self, basket):
+              scale = Scale(
+                  attribute_code=self.weight_attribute, default_weight=self.default_weight
+              )
+              weight = scale.weigh_basket(basket)
+              charge = self.get_charge(weight)
+
+          def get_charge(self, weight):
+              weight = D(weight)  # weight really should be stored as a decimal
+              if not self.bands.exists():
+                  return D("0.00")
+
+              top_band = self.top_band
+              if weight <= top_band.upper_limit:
+                  band = self.get_band_for_weight(weight)
+                  return band.charge
+              else:
+                  quotient, remaining_weight = divmod(weight, top_band.upper_limit)
+                  if remaining_weight:
+                      remainder_band = self.get_band_for_weight(remaining_weight)
+                      return quotient * top_band.charge + remainder_band.charge
+                  else:
+                      return quotient * top_band.charge
+
+          def get_band_for_weight(self, weight):
+              """
+              Return the closest matching weight band for a given weight.
+              """
+              return (
+                  self.bands.filter(upper_limit__gte=weight).order_by("upper_limit").first()
+              )
+    correct: >-
+      The basket is weighed, and the charge comes from the lowest weight band it fits
+      into. If it's heavier than the highest band, the customer pays the highest
+      band's charge for each full load of that weight, plus the charge for the band
+      that fits what's left over. Products with no weight set are counted at a
+      default weight. If no weight bands are set up, delivery is free.
+    wrong:
+      - kind: made_up_detail
+        fails: faithfulness
+        answer: >-
+          The basket is weighed, and the charge comes from the lowest weight band it
+          fits into. If it's heavier than the highest band, the highest band's charge
+          is paid for each full load of that weight, plus the band for what's left
+          over. Products with no weight set are counted at a default weight, and if no
+          bands are set up, delivery is free. Baskets over 30 kg can't be delivered.
+      - kind: other_question
+        fails: fact-1
+        answer: >-
+          The final order total is the basket after discounts, plus delivery, plus any
+          extra charges such as a card fee.
+
+  # --- Checkout ---
+  - question_id: checkout-total
+    code: |
+      # src/oscar/apps/checkout/calculators.py
+          def calculate(self, basket, shipping_charge, surcharges=None, **kwargs):
+              excl_tax = basket.total_excl_tax + shipping_charge.excl_tax
+              if basket.is_tax_known and shipping_charge.is_tax_known:
+                  incl_tax = basket.total_incl_tax + shipping_charge.incl_tax
+              else:
+                  incl_tax = None
+
+              if surcharges is not None:
+                  excl_tax += surcharges.total.excl_tax
+                  if incl_tax is not None:
+                      incl_tax += surcharges.total.incl_tax
+      # src/oscar/apps/basket/abstract_models.py
+          def total_excl_tax(self):
+              """
+              Return total line price excluding tax
+              """
+              return self._get_total("line_price_excl_tax_incl_discounts")
+      # src/oscar/apps/checkout/applicator.py
+          def get_surcharges(self, basket, **kwargs):
+              """
+              For example::
+                  return (
+                      PercentageCharge(percentage=D("2.00")),
+                      FlatCharge(excl_tax=D("20.0"), incl_tax=D("20.0")),
+                  )
+              """
+              return ()
+      # src/oscar/apps/checkout/surcharges.py
+      class PercentageCharge(BaseSurcharge):
+          def __init__(self, percentage):
+              self.percentage = percentage
+
+      class FlatCharge(BaseSurcharge):
+          def __init__(self, excl_tax=None, incl_tax=None):
+              self.excl_tax = excl_tax
+              self.incl_tax = incl_tax
+    correct: >-
+      The order total is the basket's price after discounts, plus delivery, plus any
+      extra charges. An extra charge, like a card fee, can be a percentage or a set
+      amount. There are no extra charges unless a developer adds them.
+    wrong:
+      - kind: wrong_rule
+        fails: fact-1
+        answer: >-
+          The order total is the basket's full price before any discounts, plus
+          delivery, plus any extra charges. An extra charge can be a percentage or a
+          set amount, and there are none unless a developer adds them.
+      - kind: vague
+        fails: fact-1
+        answer: >-
+          Several things go into the total, and it can change during checkout.
+
+  # --- Orders and stock ---
+  - question_id: order-status-flow
+    code: |
+      # src/oscar/apps/order/abstract_models.py
+          #: Order status pipeline.  This should be a dict where each (key, value) #:
+          #: corresponds to a status and a list of possible statuses that can follow
+          #: that one.
+          pipeline = getattr(settings, "OSCAR_ORDER_STATUS_PIPELINE", {})
+
+          def available_statuses(self):
+              """
+              Return all possible statuses that this order can move to
+              """
+              return self.pipeline.get(self.status, ())
+
+          def set_status(self, new_status):
+              if new_status == self.status:
+                  return
+
+              old_status = self.status
+
+              if new_status not in self.available_statuses():
+                  raise exceptions.InvalidOrderStatus(
+                      _(
+                          "'%(new_status)s' is not a valid status for order %(number)s"
+                          " (current status: '%(status)s')"
+                      )
+                      % {
+                          "new_status": new_status,
+                          "number": self.number,
+                          "status": self.status,
+                      }
+                  )
+              self.status = new_status
+              self.save()
+
+              self._create_order_status_change(old_status, new_status)
+
+          def _create_order_status_change(self, old_status, new_status):
+              # Not setting the status on the order as that should be handled before
+              self.status_changes.create(old_status=old_status, new_status=new_status)
+    correct: >-
+      The shop's settings list, for each status, which statuses an order can move to
+      next. Trying to move an order to a status that isn't on that list gives an
+      error. Every status change is recorded on the order.
+    wrong:
+      - kind: other_question
+        fails: fact-1
+        answer: >-
+          When an order comes in, the stock is set aside rather than taken off, and
+          it's only taken off when the items are sent out.
+      - kind: vague
+        fails: fact-1
+        answer: >-
+          Orders can move between statuses, but some moves may not be possible.
+
+  - question_id: stock-reserve-vs-deduct
+    code: |
+      # src/oscar/apps/partner/abstract_models.py
+          def net_stock_level(self):
+              """
+              The effective number in stock (e.g. available to buy).
+              """
+              return self.num_in_stock - self.num_allocated
+
+          def allocate(self, quantity):
+              """
+              Record a stock allocation.
+
+              This normally happens when a product is bought at checkout.  When the
+              product is actually shipped, then we 'consume' the allocation.
+              """
+              self.__class__.objects.filter(pk=self.pk).update(
+                  num_allocated=(Coalesce(F("num_allocated"), 0) + quantity)
+              )
+
+          def consume_allocation(self, quantity):
+              """
+              This is used when an item is shipped.  We remove the original
+              allocation and adjust the number in stock accordingly
+              """
+              self.__class__.objects.filter(pk=self.pk).update(
+                  num_allocated=(Coalesce(F("num_allocated"), 0) - quantity),
+                  num_in_stock=(Coalesce(F("num_in_stock"), 0) - quantity),
+              )
+
+          def cancel_allocation(self, quantity):
+              self.__class__.objects.filter(pk=self.pk).update(
+                  num_allocated=Coalesce(F("num_allocated"), 0)
+                  - Least(Coalesce(F("num_allocated"), 0), quantity),
+              )
+      # src/oscar/apps/order/utils.py
+              if line.product.get_product_class().track_stock:
+                  line.stockrecord.allocate(line.quantity)
+      # src/oscar/apps/order/processing.py
+          def handle_shipping_event(
+              self, order, event_type, lines, line_quantities, **kwargs
+          ):
+              """
+              You will generally want to override this method to implement the
+              specifics of you order processing pipeline.
+              """
+              # Example implementation
+              self.validate_shipping_event(
+                  order, event_type, lines, line_quantities, **kwargs
+              )
+              return self.create_shipping_event(
+                  order, event_type, lines, line_quantities, **kwargs
+              )
+
+          def consume_stock_allocations(self, order, lines=None, line_quantities=None):
+              for line, qty in zip(lines, line_quantities):
+                  line.consume_allocation(qty)
+    correct: >-
+      When an order is placed, the stock is set aside, not taken off. It's only taken
+      off when the items are sent out, and only if the shop's order handling has been
+      set up to do that. Customers can only buy what's in stock minus what's set
+      aside, and set-aside stock can be released again so it can be sold.
+    wrong:
+      - kind: wrong_rule
+        fails: fact-1
+        answer: >-
+          Stock is taken off straight away when the order is placed. Customers can
+          only buy what's left, and stock can be put back if the order is cancelled.
+      - kind: made_up_detail
+        fails: faithfulness
+        answer: >-
+          When an order is placed, the stock is set aside, not taken off. It's only
+          taken off when the items are sent out, and only if the shop's order handling
+          is set up to do that. Customers can only buy what's in stock minus what's set
+          aside, and set-aside stock can be released again. Set-aside stock is
+          released automatically after 24 hours.
+
+  - question_id: promotion-not-applying
+    code: |
+      # src/oscar/apps/offer/abstract_models.py
+          def can_apply_benefit(self, line):
+              """
+              Determines whether the benefit can be applied to a given basket line
+              """
+              return line.stockrecord and line.product.is_discountable
+
+          includes_all_products = models.BooleanField(
+              _("Includes all products?"), default=False
+          )
+          included_products = models.ManyToManyField(
+              "catalogue.Product",
+              related_name="includes",
+              blank=True,
+              verbose_name=_("Included Products"),
+          )
+          excluded_products = models.ManyToManyField(
+              "catalogue.Product",
+              related_name="excludes",
+              blank=True,
+              verbose_name=_("Excluded Products"),
+          )
+
+          def contains_product(self, product):
+              if self.proxy:
+                  return self.proxy.contains_product(product)
+              return self.product_queryset.filter(id=product.id).exists()
+
+          def all_products(self):
+              """
+              Return a queryset containing all the products in the range
+
+              This includes included_products plus the products contained in the
+              included classes and categories, minus the products in
+              excluded_products.
+              """
+      # src/oscar/apps/catalogue/abstract_models.py
+          is_discountable = models.BooleanField(
+              _("Is discountable?"),
+              default=True,
+              help_text=_(
+                  "This flag indicates if this product can be used in an offer or not"
+              ),
+          )
+    correct: >-
+      It's most likely a setup issue, not a bug. A sale only covers the products on
+      its product list. The product may be missing from that list, or it may have been
+      deliberately left out of it. It's also possible the product is marked so that it
+      never gets discounts.
+    wrong:
+      - kind: other_question
+        fails: fact-1
+        answer: >-
+          When several promotions could apply, the one with the highest priority goes
+          first, and promotions start with a priority of 0.
+      - kind: wrong_rule
+        fails: fact-2
+        answer: >-
+          It's most likely a setup issue, not a bug. A sale always covers every product
+          in the shop, so the product may be marked so that it never gets discounts.
