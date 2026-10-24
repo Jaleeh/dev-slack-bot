@@ -5,9 +5,9 @@ import pytest
 import yaml
 from pydantic import ValidationError
 
+from evals.dataset_file import InvalidDataset
 from evals.question_set import (
     QUESTIONS_PATH,
-    InvalidQuestionSet,
     QuestionSet,
     load_question_set,
 )
@@ -100,7 +100,7 @@ def test_load_names_a_bad_entry_by_its_id(tmp_path: Path) -> None:
     path = tmp_path / "questions.yaml"
     path.write_text(yaml.safe_dump(a_question_set(a_question(id="voucher-dates", files=["./a"]))))
 
-    with pytest.raises(InvalidQuestionSet, match=r"voucher-dates \(questions\.0\.files\.0\)"):
+    with pytest.raises(InvalidDataset, match=r"voucher-dates \(questions\.0\.files\.0\)"):
         load_question_set(path)
 
 
@@ -110,7 +110,7 @@ def test_load_names_an_entry_without_an_id_by_its_position(tmp_path: Path) -> No
     path = tmp_path / "questions.yaml"
     path.write_text(yaml.safe_dump(a_question_set(question)))
 
-    with pytest.raises(InvalidQuestionSet, match=r"entry 1 \(questions\.0\.id\)"):
+    with pytest.raises(InvalidDataset, match=r"entry 1 \(questions\.0\.id\)"):
         load_question_set(path)
 
 
