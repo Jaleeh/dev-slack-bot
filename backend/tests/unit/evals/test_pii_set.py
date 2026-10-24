@@ -6,7 +6,7 @@ import yaml
 from pydantic import ValidationError
 
 from evals.dataset_file import InvalidDataset
-from evals.pii_set import PiiSet, PiiType, load_pii_set, name_words
+from evals.pii_set import PII_PATH, PiiSet, PiiType, load_pii_set, name_words
 
 SPEC_QUESTION = "Why can't John Doe (john.doe@example.com, 07700 900123) check out?"
 
@@ -257,3 +257,10 @@ def test_load_names_a_bad_snippet_by_its_id(tmp_path: Path) -> None:
     with pytest.raises(InvalidDataset, match=r"refund-call \(snippets\.0\)"):
         load_pii_set(path)
 
+
+def test_the_pii_set_is_valid() -> None:
+    pii_set = load_pii_set(PII_PATH)
+
+    planted_types = {planted.type for snippet in pii_set.snippets for planted in snippet.planted}
+    assert len(pii_set.snippets) >= 20
+    assert planted_types == set(PiiType)

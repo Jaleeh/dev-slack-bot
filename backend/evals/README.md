@@ -32,7 +32,10 @@ Until the bot exists, it scores a stand-in that returns the answer key, so every
 | File | Holds |
 |---|---|
 | `datasets/questions.yaml` | The labelled questions, with the facts and files each answer needs |
+| `datasets/pii.yaml` | Fake personal data planted in short texts, and look-alikes a redactor must leave alone |
+| `dataset_file.py` | Loads a dataset file and names each badly formed entry by its id |
 | `question_set.py` | Loads the questions and rejects badly formed entries |
+| `pii_set.py` | Loads the fake personal data and rejects badly formed or real-looking entries |
 | `retrieval_metrics.py` | recall@k and reciprocal rank |
 | `sample_repo.py` | Downloads the sample repository once and reuses it |
 | `retriever.py` | The hook a retrieval method plugs into, and the answer-key stand-in |
