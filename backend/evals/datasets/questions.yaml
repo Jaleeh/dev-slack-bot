@@ -1,0 +1,357 @@
+version: 1
+repo: django-oscar
+ref: 4.2.1
+questions:
+  # --- Offers ---
+  - id: offer-order
+    type: how_it_works
+    question: "When several promotions could apply to the same basket, which one is applied first?"
+    key_facts:
+      - "Every promotion has a priority number, and the highest priority is applied first."
+      - "All promotions start with a priority of 0 unless someone changes it."
+      - "When two promotions have the same priority, a voucher's promotion goes before a site-wide sale."
+    files:
+      - src/oscar/apps/offer/applicator.py
+      - src/oscar/apps/offer/abstract_models.py
+
+  - id: offer-usage-limits
+    type: how_it_works
+    question: "How can we stop a promotion being used too many times?"
+    key_facts:
+      - "A promotion can be limited to a set number of uses in total, per customer, and per basket."
+      - "The per-customer limit only works for customers who are signed in."
+      - "One order can use up more than one of these uses."
+      - "A promotion can also have a spending limit; once it has given away that much discount, it stops."
+    files:
+      - src/oscar/apps/offer/abstract_models.py
+
+  - id: offer-stacking
+    type: how_it_works
+    question: "Can two promotions both discount the same item in a basket?"
+    key_facts:
+      - "By default, a promotion can't share an item with any other promotion."
+      - "If both promotions are set to allow sharing, they can discount the same item."
+      - "A promotion can also be limited to sharing only with specific named promotions."
+    files:
+      - src/oscar/apps/basket/utils.py
+      - src/oscar/apps/offer/abstract_models.py
+
+  - id: offer-voucher-dates
+    type: how_it_works
+    question: "If a promotion is attached to a voucher and both have start and end dates, which dates decide whether the discount applies?"
+    key_facts:
+      - "Only the voucher's dates count."
+      - "The start and end dates on the promotion behind a voucher are ignored."
+      - "Sales that run without a voucher use their own dates."
+    files:
+      - src/oscar/apps/offer/applicator.py
+      - src/oscar/apps/offer/abstract_models.py
+      - src/oscar/apps/voucher/abstract_models.py
+
+  - id: offer-repeat
+    type: how_it_works
+    question: "With a buy-three-get-the-cheapest-free deal, does the customer get one free item or one for every three they buy?"
+    key_facts:
+      - "The customer gets one free item per basket, however many they buy."
+      - "The cheapest qualifying item is the one that's free."
+    files:
+      - src/oscar/apps/offer/applicator.py
+      - src/oscar/apps/offer/benefits.py
+      - src/oscar/apps/offer/conditions.py
+
+  # --- Vouchers ---
+  - id: voucher-usage-types
+    type: how_it_works
+    question: "What are the different ways a voucher code can be limited in how often it's used?"
+    key_facts:
+      - "A voucher can be set to: used once in total, used any number of times, or used once per customer."
+      - "A 'once in total' voucher stops working after the first order that uses it."
+      - "A 'once per customer' voucher only works for customers who are signed in."
+      - "'Any number of times' is the default."
+    files:
+      - src/oscar/apps/voucher/abstract_models.py
+
+  - id: voucher-dates
+    type: how_it_works
+    question: "When is a voucher code valid, and what does the customer see if they use it outside that time?"
+    key_facts:
+      - "A voucher only works between its start and end date and time."
+      - "Every voucher must have both dates."
+      - "After the end date, the customer is told the voucher has expired."
+      - "Before the start date, the customer is told the voucher isn't active."
+    files:
+      - src/oscar/apps/voucher/abstract_models.py
+      - src/oscar/apps/basket/views.py
+
+  - id: voucher-basket-fit
+    type: how_it_works
+    question: "Why might a valid, in-date voucher code be turned down for some baskets but not others?"
+    key_facts:
+      - "A voucher only gives a discount if the basket meets the rules of the deal behind it, such as which products it covers."
+      - "If the basket doesn't qualify, the customer is told so and the voucher is taken off the basket."
+      - "Some products can be marked so they never get discounts."
+    files:
+      - src/oscar/apps/basket/views.py
+      - src/oscar/apps/voucher/abstract_models.py
+      - src/oscar/apps/offer/abstract_models.py
+
+  # --- Basket ---
+  - id: basket-states
+    type: how_it_works
+    question: "What states can a shopping basket be in, and in which states can the customer still change it?"
+    key_facts:
+      - "A basket can be open, saved, merged, frozen or submitted."
+      - "Customers can only change a basket that is open or saved."
+      - "A frozen basket is locked and can't be changed or emptied."
+      - "A basket becomes submitted once it has been turned into an order."
+    files:
+      - src/oscar/apps/basket/abstract_models.py
+
+  - id: basket-login-merge
+    type: how_it_works
+    question: "A shopper adds items while browsing as a guest and then signs in. What happens to those items?"
+    key_facts:
+      - "The items are moved into the customer's own basket when they sign in."
+      - "If an item is in both baskets, the customer keeps the larger quantity; the two are not added together."
+      - "Any vouchers come across too."
+      - "The customer sees a message saying how many items were moved."
+    files:
+      - src/oscar/apps/basket/middleware.py
+      - src/oscar/apps/basket/abstract_models.py
+
+  - id: basket-quantity-limit
+    type: how_it_works
+    question: "Is there a limit on how many items a customer can put in one basket?"
+    key_facts:
+      - "Yes, a basket can hold at most 10,000 items in total, unless the shop changes this."
+      - "The limit protects the site from huge baskets that would overload the promotion checks."
+      - "For products where the shop tracks stock, a customer also can't add more than is in stock."
+    files:
+      - src/oscar/apps/basket/abstract_models.py
+      - src/oscar/apps/basket/forms.py
+
+  - id: basket-during-payment
+    type: how_it_works
+    question: "What happens to a customer's basket while their payment is being processed, and what if the payment fails?"
+    key_facts:
+      - "The basket is locked while payment is taken, so it can't be changed."
+      - "If payment fails, the basket is unlocked and the customer can carry on with it."
+      - "Anything the customer added during the failed payment is added back into it."
+      - "Once the order goes through, the basket is closed off as an order."
+    files:
+      - src/oscar/apps/checkout/views.py
+      - src/oscar/apps/checkout/mixins.py
+
+  # --- Shipping ---
+  - id: shipping-not-needed
+    type: how_it_works
+    question: "What delivery option does a customer get when nothing in their basket needs posting, such as a download?"
+    key_facts:
+      - "If nothing in the basket needs posting, the only option is 'No shipping required'."
+      - "That option is free."
+      - "Whether a product needs posting is set by its product type."
+      - "The customer isn't asked for a delivery address."
+    files:
+      - src/oscar/apps/shipping/repository.py
+      - src/oscar/apps/shipping/methods.py
+      - src/oscar/apps/basket/abstract_models.py
+      - src/oscar/apps/checkout/session.py
+
+  - id: shipping-weight
+    type: how_it_works
+    question: "How is a delivery charge worked out when it's based on parcel weight?"
+    key_facts:
+      - "The basket is weighed, and the charge comes from the lowest weight band it fits into."
+      - "If it's heavier than the highest band, the highest band's charge is paid for each full load of that weight, plus the band for what's left over."
+      - "Products with no weight set are counted at a default weight."
+      - "If no weight bands are set up, delivery is free."
+    files:
+      - src/oscar/apps/shipping/abstract_models.py
+
+  - id: shipping-promotion
+    type: how_it_works
+    question: "How does a delivery promotion change the shipping price a customer pays?"
+    key_facts:
+      - "A delivery promotion can take a set amount off, take a percentage off, or set delivery to a fixed price."
+      - "Taking a set amount off never makes delivery cheaper than free."
+      - "Only one delivery promotion is used per basket."
+      - "Delivery that's already free isn't changed."
+    files:
+      - src/oscar/apps/shipping/repository.py
+      - src/oscar/apps/offer/benefits.py
+
+  # --- Checkout ---
+  - id: checkout-preconditions
+    type: how_it_works
+    question: "What has to be in place before a customer is allowed through to pay?"
+    key_facts:
+      - "The basket can't be empty."
+      - "Everything in the basket must still be available to buy in the amount wanted."
+      - "The customer must be signed in or have given an email address."
+      - "If anything needs posting, a delivery address and a delivery option must be chosen."
+    files:
+      - src/oscar/apps/checkout/session.py
+      - src/oscar/apps/checkout/views.py
+
+  - id: checkout-total
+    type: how_it_works
+    question: "How is the final order total made up?"
+    key_facts:
+      - "The total is the basket after discounts, plus delivery, plus any extra charges."
+      - "Extra charges, like a card fee, can be a percentage or a set amount."
+      - "There are no extra charges unless a developer adds them."
+    files:
+      - src/oscar/apps/checkout/calculators.py
+      - src/oscar/apps/checkout/applicator.py
+      - src/oscar/apps/checkout/surcharges.py
+
+  # --- Orders ---
+  - id: order-status-flow
+    type: how_it_works
+    question: "Which status changes are allowed for an order?"
+    key_facts:
+      - "The shop's settings decide which statuses each status can move to next."
+      - "Trying a move that isn't allowed gives an error."
+      - "Every status change is recorded on the order."
+    files:
+      - src/oscar/apps/order/abstract_models.py
+
+  - id: order-status-lines
+    type: how_it_works
+    question: "When an order's status changes, what happens to the status of the individual items on it?"
+    key_facts:
+      - "The shop can set an order status to also update the status of every item on the order."
+      - "An item only changes if that move is allowed for the item's current status."
+    files:
+      - src/oscar/apps/order/abstract_models.py
+
+  - id: order-placed-records
+    type: how_it_works
+    question: "Apart from the order itself, what gets recorded when a customer places an order?"
+    key_facts:
+      - "Each promotion used is saved on the order with how much it took off."
+      - "Each promotion's count of uses and total discount given go up."
+      - "Each voucher used is saved against the order, and against the customer if they're signed in."
+      - "Stock is set aside for each item, for products where the shop tracks stock."
+    files:
+      - src/oscar/apps/order/utils.py
+      - src/oscar/apps/offer/abstract_models.py
+      - src/oscar/apps/voucher/abstract_models.py
+
+  # --- Partner / stock ---
+  - id: stock-reserve-vs-deduct
+    type: how_it_works
+    question: "When an order comes in, is stock taken off straight away or only when it's sent out?"
+    key_facts:
+      - "When the order is placed, stock is set aside, not taken off."
+      - "Stock is only taken off when the items are sent out, and only if the shop's order handling is set up to do that."
+      - "Customers can only buy what's in stock minus what's set aside."
+      - "Set-aside stock can be released again so it can be sold."
+    files:
+      - src/oscar/apps/partner/abstract_models.py
+      - src/oscar/apps/order/utils.py
+      - src/oscar/apps/order/processing.py
+
+  - id: supplier-choice
+    type: how_it_works
+    question: "If more than one supplier stocks the same product, whose price and stock level does the customer see?"
+    key_facts:
+      - "The customer sees the price and stock from the first supplier found for that product."
+      - "The shop is built assuming each product has one supplier."
+      - "Picking the best supplier needs a developer to change the setup."
+    files:
+      - src/oscar/apps/partner/strategy.py
+
+  - id: tax-on-prices
+    type: how_it_works
+    question: "How is tax added to product prices?"
+    key_facts:
+      - "Out of the box, no tax is added to prices."
+      - "A sample UK setup adds 20% tax to every price."
+      - "A sample US setup leaves tax to be worked out later, usually once the delivery address is known."
+      - "Which setup is used is chosen by a developer."
+    files:
+      - src/oscar/apps/partner/strategy.py
+
+  - id: low-stock-alert
+    type: how_it_works
+    question: "When does the shop flag that stock of a product is running low?"
+    key_facts:
+      - "A product's stock can have a low-stock level set."
+      - "An alert is raised when the stock available drops below that level."
+      - "The alert closes by itself once stock is no longer below that level."
+      - "If no low-stock level is set, no alert is raised."
+    files:
+      - src/oscar/apps/partner/abstract_models.py
+      - src/oscar/apps/partner/receivers.py
+
+  # --- Bug or setup ---
+  - id: voucher-guest-rejected
+    type: bug_or_setup
+    question: "A customer checking out as a guest says their voucher code is rejected, but it works for other people. Is that a bug or a setup issue?"
+    key_facts:
+      - "It's a setup issue, not a bug."
+      - "The voucher is set to 'once per customer'."
+      - "Those vouchers only work for customers who are signed in."
+      - "Fix: ask the customer to sign in, or change how the voucher can be used."
+    files:
+      - src/oscar/apps/voucher/abstract_models.py
+      - src/oscar/apps/basket/views.py
+
+  - id: voucher-not-valid-yet
+    type: bug_or_setup
+    question: "On launch day, customers are told a new voucher code is not active. Is that a bug or a setup issue?"
+    key_facts:
+      - "It's a setup issue, not a bug."
+      - "A voucher only works between its start and end date and time."
+      - "The start date or time was probably set later than intended."
+      - "Fix: correct the voucher's start date and time."
+    files:
+      - src/oscar/apps/voucher/abstract_models.py
+      - src/oscar/apps/basket/views.py
+
+  - id: promotion-not-applying
+    type: bug_or_setup
+    question: "A sale is running, but one product that should be in it isn't getting the discount. Is that a bug or a setup issue?"
+    key_facts:
+      - "It's most likely a setup issue, not a bug."
+      - "A sale only covers the products on its product list."
+      - "The product may be missing from that list, or deliberately left out of it."
+      - "The product may be marked so it never gets discounts."
+    files:
+      - src/oscar/apps/offer/abstract_models.py
+
+  - id: cannot-buy-product
+    type: bug_or_setup
+    question: "A product shows on the site but customers can't add it to their basket. Is that a bug or a setup issue?"
+    key_facts:
+      - "It's most likely a setup issue, not a bug."
+      - "A product can't be bought until stock has been set up for it."
+      - "If the shop tracks stock for that product, it can't be bought when none is left."
+      - "Fix: set up stock for the product, or top it up."
+    files:
+      - src/oscar/apps/partner/strategy.py
+      - src/oscar/apps/partner/availability.py
+      - src/oscar/apps/basket/forms.py
+
+  - id: only-free-delivery
+    type: bug_or_setup
+    question: "Customers only ever see free delivery at checkout, even for heavy orders. Is that a bug or a setup issue?"
+    key_facts:
+      - "It's a setup issue, not a bug."
+      - "Out of the box, free delivery is the only option."
+      - "Other delivery options have to be added by a developer."
+    files:
+      - src/oscar/apps/shipping/repository.py
+      - src/oscar/apps/shipping/methods.py
+
+  - id: status-change-blocked
+    type: bug_or_setup
+    question: "Staff get an error when they try to move an order to a status they need. Is that a bug or a setup issue?"
+    key_facts:
+      - "It's a setup issue, not a bug."
+      - "An order can only move to the statuses the shop's settings allow from its current status."
+      - "Out of the box, no moves are allowed until the shop sets them up."
+      - "Fix: add that move to the order status settings."
+    files:
+      - src/oscar/apps/order/abstract_models.py
