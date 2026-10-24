@@ -9,12 +9,12 @@ from evals.pii_set import PiiSet
 from evals.question_set import QuestionSet
 from evals.redactor import AnswerKeyRedactor, NoRedactor
 from evals.retriever import AnswerKeyRetriever
+from evals.run_record import RepoCommitError
 from evals.runner import (
     STAND_INS,
     Contenders,
     Metrics,
     MissingFiles,
-    RepoCommitError,
     RunConfig,
     evaluate,
     main,
