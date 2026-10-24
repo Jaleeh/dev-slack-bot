@@ -18,6 +18,8 @@ Ask it in Slack how a business rule works, or whether a reported problem is a bu
 
 `make dev` runs the backend and frontend on your machine with hot reload, and keeps Postgres in Docker. Open http://localhost:3000; `/api` calls go to the backend on port 8000. Stop it with Ctrl-C.
 
+`make eval` scores retrieval on the eval question set and saves the numbers to `backend/evals/results/`. The first run downloads the sample repository. It needs uv and git.
+
 `make dev`, `make test` and `make lint` need [uv](https://docs.astral.sh/uv/), Node 24 (`nvm use` reads `.nvmrc`) and pnpm on your machine.
 
 ## Why
@@ -107,7 +109,3 @@ FastAPI, LangGraph, Postgres with pgvector, Presidio, Slack Bolt and Next.js, pa
 - [Project structure](docs/project-structure.md): folder layout, import rules, test layout
 - [`docs/adrs/`](docs/adrs/): architectural decision records
 - [`docs/specs/`](docs/specs/) and [`docs/plans/`](docs/plans/): slice specs and implementation plans
-
-## Licence
-
-MIT. The `LICENSE` file is added with the first public commit.
