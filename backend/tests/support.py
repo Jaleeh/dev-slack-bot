@@ -7,6 +7,7 @@ from sqlalchemy.pool import NullPool
 ClientFactory = Callable[[str], TestClient]
 
 UNREACHABLE_DATABASE_URL = "postgresql+psycopg://x:y@localhost:1/none"
+UNREACHABLE_URL = "http://localhost:9"
 
 
 def ensure_database_exists(database_url: str) -> None:

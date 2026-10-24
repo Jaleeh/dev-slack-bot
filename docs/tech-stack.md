@@ -35,6 +35,8 @@ Versions: the newest stable release of each tool that works with the rest. Exact
 
 Evals score a labelled question set on recall@k, MRR, faithfulness, redaction catch rate, cost and latency. Scoring is hand-written ([ADR-001](adrs/adr-001-how-answers-and-retrieval-are-evaluated.md)). Ragas may be added later as a cross-check.
 
+The answer grader asks a model yes/no questions about each answer. It defaults to a local Ollama model (`CHAT_MODEL`, default `ollama:ornith:9b`). `EVAL_JUDGE_MODEL` picks a different grader model, and `OLLAMA_BASE_URL` says where Ollama listens. Replies are read with Ollama's structured outputs through LangChain.
+
 ## Packaging and CI
 
 | Area | Tool | Purpose |

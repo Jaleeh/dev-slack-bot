@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help up dev db down logs migrate test lint fmt eval
+.PHONY: help up dev db down logs migrate test lint fmt eval eval-answers
 
 # Make creates .env from the example first if it is missing, then re-reads it.
 -include .env
@@ -13,7 +13,7 @@ export TEST_DATABASE_URL
 DEV_DATABASE_URL := postgresql+psycopg://$(POSTGRES_USER):$(POSTGRES_PASSWORD)@localhost:$(POSTGRES_HOST_PORT)/$(POSTGRES_DB)
 
 help: ## List the available targets
-	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(firstword $(MAKEFILE_LIST)) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-10s %s\n", $$1, $$2}'
+	@grep -hE '^[a-zA-Z_-]+:.*?## ' $(firstword $(MAKEFILE_LIST)) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-13s %s\n", $$1, $$2}'
 
 .env:
 	cp .env.example .env
@@ -54,3 +54,6 @@ fmt: ## Format backend and frontend code
 
 eval: ## Score retrieval and PII redaction on the eval sets (fetches the sample repo on first run)
 	cd backend && uv run python -m evals.runner
+
+eval-answers: ## Grade the planted answers with the local model (needs Ollama running)
+	cd backend && uv run python -m evals.answer_runner
