@@ -9,7 +9,6 @@ questions:
     key_facts:
       - "Every promotion has a priority number, and the highest priority is applied first."
       - "All promotions start with a priority of 0 unless someone changes it."
-      - "When two promotions have the same priority, a voucher's promotion goes before a site-wide sale."
     files:
       - src/oscar/apps/offer/applicator.py
       - src/oscar/apps/offer/abstract_models.py

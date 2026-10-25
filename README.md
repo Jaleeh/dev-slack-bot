@@ -20,7 +20,7 @@ Ask it in Slack how a business rule works, or whether a reported problem is a bu
 
 `make eval` scores retrieval on the eval question set and saves the numbers to `backend/evals/results/`. The first run downloads the sample repository. It needs uv and git.
 
-`make eval-answers` checks that the answer grader passes right answers and fails planted wrong ones, using a local model. It takes several minutes. To set it up, install the [Ollama app](https://ollama.com/download) from its `.dmg`, then run `ollama pull ornith:9b`.
+`make eval-answers` checks that the answer grader passes right answers and fails planted wrong ones, using a local model. It takes several minutes. To set it up, install the [Ollama app](https://ollama.com/download) from its `.dmg`, then run `ollama pull gemma4:e4b` (the grader) and `ollama pull ornith:9b` (the chat model).
 
 `make dev`, `make test` and `make lint` need [uv](https://docs.astral.sh/uv/), Node 24 (`nvm use` reads `.nvmrc`) and pnpm on your machine.
 

@@ -3,7 +3,7 @@ from langchain_core.exceptions import OutputParserException
 from evals.answer_set import WrongAnswer
 from evals.grader import RETRY_NUDGE, Grade, Verdict, grade, outcome_for_correct, outcome_for_wrong
 from evals.question_set import Question
-from tests.fake_judge import NO, YES, FakeJudge, FunctionJudge
+from tests.fake_judge import NO, UNCLEAR, YES, FakeJudge, FunctionJudge
 
 UNREADABLE = "sure!"
 
@@ -42,33 +42,39 @@ def a_wrong(fails: str) -> WrongAnswer:
 
 
 def test_stated_facts_and_clean_faithfulness_pass() -> None:
-    result = grade_with(YES, YES, NO)
+    result = grade_with(YES, YES, YES)
 
     assert outcomes(result) == {"fact-1": "pass", "fact-2": "pass", "faithfulness": "pass"}
     assert result.fact_score == 1.0
 
 
 def test_an_unstated_fact_fails_and_halves_the_score() -> None:
-    result = grade_with(YES, NO, NO)
+    result = grade_with(YES, NO, YES)
 
     assert outcomes(result)["fact-2"] == "fail"
     assert result.fact_score == 0.5
 
 
 def test_an_unsupported_claim_fails_faithfulness() -> None:
-    result = grade_with(YES, YES, YES)
+    result = grade_with(YES, YES, NO)
 
     assert outcomes(result)["faithfulness"] == "fail"
 
 
 def test_one_unreadable_reply_is_retried() -> None:
-    result = grade_with(UNREADABLE, YES, YES, NO)
+    result = grade_with(UNREADABLE, YES, YES, YES)
 
     assert outcomes(result) == {"fact-1": "pass", "fact-2": "pass", "faithfulness": "pass"}
 
 
+def test_code_too_thin_to_judge_leaves_faithfulness_unclear() -> None:
+    result = grade_with(YES, YES, UNCLEAR)
+
+    assert outcomes(result)["faithfulness"] == "unclear"
+
+
 def test_two_unreadable_replies_are_ungraded() -> None:
-    result = grade_with(UNREADABLE, UNREADABLE, YES, NO)
+    result = grade_with(UNREADABLE, UNREADABLE, YES, YES)
 
     assert outcomes(result)["fact-1"] == "ungraded"
     assert result.fact_score == 0.5
@@ -94,6 +100,10 @@ def test_any_ungraded_check_is_inconclusive() -> None:
     result = a_grade(faithfulness="fail", **{"fact-1": "ungraded"})
 
     assert outcome_for_wrong(result, a_wrong("faithfulness")) == "inconclusive"
+
+
+def test_an_unclear_check_is_inconclusive_not_right() -> None:
+    assert outcome_for_correct(a_grade(faithfulness="unclear")) == "inconclusive"
 
 
 def test_a_reply_that_is_not_a_verdict_is_ungraded() -> None:

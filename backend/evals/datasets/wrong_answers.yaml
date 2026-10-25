@@ -36,30 +36,20 @@ answers:
                       reverse=True,
                   )
               )
-
-          def get_basket_offers(self, basket, user):
-              """
-              Return basket-linked offers such as those associated with a voucher
-              code
-              """
     correct: >-
       Every promotion has a priority number, and the one with the highest priority is
       applied first. Promotions start with a priority of 0 unless someone changes it.
-      If two promotions have the same priority, a promotion that comes from a voucher
-      code goes before a site-wide sale.
     wrong:
       - kind: wrong_rule
         fails: fact-1
         answer: >-
           Every promotion has a priority number, and the one with the lowest number is
-          applied first. Promotions start at 0 unless someone changes it. If two have
-          the same priority, a voucher's promotion goes before a site-wide sale.
+          applied first. Promotions start at 0 unless someone changes it.
       - kind: made_up_detail
         fails: faithfulness
         answer: >-
           Every promotion has a priority number, and the highest priority is applied
-          first. Promotions start with a priority of 0 unless someone changes it. If two
-          have the same priority, a voucher's promotion goes before a site-wide sale.
+          first. Promotions start with a priority of 0 unless someone changes it.
           The priority can't be set higher than 10.
 
   - question_id: offer-repeat
@@ -100,7 +90,48 @@ answers:
                   return BasketDiscount(discount)
               else:
                   return ZERO_DISCOUNT
+      # src/oscar/apps/offer/conditions.py
+          def is_satisfied(self, offer, basket):
+              """
+              Determines whether a given basket meets this condition
+              """
+              num_matches = 0
+              for line in basket.all_lines():
+                  if self.can_apply_condition(line):
+                      num_matches += line.quantity_without_offer_discount(offer)
+                  if num_matches >= self.value:
+                      return True
+              return False
       # src/oscar/apps/offer/abstract_models.py
+          def get_applicable_lines(self, offer, basket, range=None):
+              """
+              Return the basket lines that are available to be discounted
+
+              :basket: The basket
+              :range: The range of products to use for filtering.  The fixed-price
+                      benefit ignores its range and uses the condition range
+              """
+              if range is None:
+                  range = self.range
+              if range is None:
+                  raise exceptions.ImproperlyConfigured(
+                      "Benefit of type %r has no range set. Custom benefit "
+                      "classes must either set a range or override "
+                      "get_applicable_lines." % self.type
+                  )
+              line_tuples = []
+              for line in basket.all_lines():
+                  product = line.product
+
+                  if not range.contains_product(product) or not self.can_apply_benefit(line):
+                      continue
+
+                  price = unit_price(offer, line)
+                  if not price:
+                      # Avoid zero price products
+                      continue
+                  line_tuples.append((price, line))
+
               # We sort lines to be cheapest first to ensure consistent applications
               return sorted(line_tuples, key=operator.itemgetter(0))
     correct: >-
@@ -326,6 +357,9 @@ answers:
               weight = scale.weigh_basket(basket)
               charge = self.get_charge(weight)
 
+              # Zero tax is assumed...
+              return prices.Price(currency=basket.currency, excl_tax=charge, incl_tax=charge)
+
           def get_charge(self, weight):
               weight = D(weight)  # weight really should be stored as a decimal
               if not self.bands.exists():
@@ -350,6 +384,30 @@ answers:
               return (
                   self.bands.filter(upper_limit__gte=weight).order_by("upper_limit").first()
               )
+      # src/oscar/apps/shipping/scales.py
+          def weigh_product(self, product):
+              weight = None
+              try:
+                  weight = (
+                      product.get_attribute_values().get(attribute__code=self.attribute).value
+                  )
+              except ObjectDoesNotExist:
+                  pass
+
+              if weight is None:
+                  if self.default_weight is None:
+                      raise ValueError(
+                          "No attribute %s found for product %s" % (self.attribute, product)
+                      )
+                  weight = self.default_weight
+
+              return D(weight) if weight is not None else D("0.0")
+
+          def weigh_basket(self, basket):
+              weight = D("0.0")
+              for line in basket.all_lines():
+                  weight += self.weigh_product(line.product) * line.quantity
+              return weight
     correct: >-
       The basket is weighed, and the charge comes from the lowest weight band it fits
       into. If it's heavier than the highest band, the customer pays the highest
