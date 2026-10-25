@@ -29,6 +29,7 @@ Which solution was chosen and why
 ADR numbers are assigned in the order ADRs are created, not by topic.
 
 - [ADR-001: How answers and retrieval are evaluated](adr-001-how-answers-and-retrieval-are-evaluated.md)
+- [ADR-002: How the bot finds code to answer a question](adr-002-how-the-bot-finds-code-to-answer-a-question.md)
 
 ## Key considerations
 
