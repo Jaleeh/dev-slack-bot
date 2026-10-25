@@ -39,7 +39,7 @@ def use_judge(monkeypatch: pytest.MonkeyPatch, model: str, url: str) -> None:
 def test_a_judge_that_always_says_yes_is_counted(tmp_path: Path) -> None:
     run = evaluate_answers(a_config(tmp_path), FakeJudge(responses=[YES]), JUDGE_MODEL)
 
-    # "Yes" to faithfulness fails both correct answers and every wrong answer naming a fact.
+    # "Yes" passes every check: both correct answers are right, every wrong answer is missed.
     assert run.counts == Counts(right=2, wrong=8, inconclusive=0, ungraded_checks=0)
 
 

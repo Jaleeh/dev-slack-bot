@@ -8,6 +8,7 @@ from pydantic import BaseModel
 
 YES = '{"answer": "yes"}'
 NO = '{"answer": "no"}'
+UNCLEAR = '{"answer": "unclear"}'
 
 
 class FakeJudge(FakeListChatModel):

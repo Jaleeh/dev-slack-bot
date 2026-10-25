@@ -25,17 +25,24 @@ Code:
 {code}
 Question: {question}
 Answer: {answer}
-Does the answer claim anything this code doesn't support? Reply yes or no."""
+Is every rule, limit, number and behaviour in the answer supported by this code? \
+Reply yes or no. Reply unclear if the code shown isn't enough to tell."""
 
-RETRY_NUDGE = "Reply with only yes or no."
+RETRY_NUDGE = "Reply with only the one word asked for."
 
-Reply = Literal["yes", "no"]
-CheckOutcome = Literal["pass", "fail", "ungraded"]
+Reply = Literal["yes", "no", "unclear"]
+CheckOutcome = Literal["pass", "fail", "unclear", "ungraded"]
 Outcome = Literal["right", "wrong", "inconclusive"]
 StructuredJudge = Runnable[LanguageModelInput, object]
 
 
 class Verdict(BaseModel):
+    answer: Literal["yes", "no"]
+
+
+class FaithfulnessVerdict(BaseModel):
+    """Lets the judge say the code shown isn't enough, instead of guessing."""
+
     answer: Reply
 
 
@@ -66,6 +73,7 @@ def fact_score(checks: Sequence[CheckResult]) -> float:
 def grade(judge: BaseChatModel, question: Question, answer: str, code: str) -> Grade:
     """Checks each key fact in order, then faithfulness."""
     structured = judge.with_structured_output(Verdict)
+    faithfulness_judge = judge.with_structured_output(FaithfulnessVerdict)
     faithfulness_prompt = FAITHFULNESS_PROMPT.format(
         code=code, question=question.question, answer=answer
     )
@@ -85,21 +93,21 @@ def grade(judge: BaseChatModel, question: Question, answer: str, code: str) -> G
     )
     faithfulness = CheckResult(
         check=FAITHFULNESS,
-        outcome=_outcome(_ask(structured, faithfulness_prompt), passing="no"),
+        outcome=_outcome(_ask(faithfulness_judge, faithfulness_prompt), passing="yes"),
     )
 
     return Grade(checks=(*facts, faithfulness))
 
 
 def outcome_for_correct(result: Grade) -> Outcome:
-    if _has_ungraded(result):
+    if _is_inconclusive(result):
         return "inconclusive"
 
     return "right" if all(check.outcome == "pass" for check in result.checks) else "wrong"
 
 
 def outcome_for_wrong(result: Grade, wrong: WrongAnswer) -> Outcome:
-    if _has_ungraded(result):
+    if _is_inconclusive(result):
         return "inconclusive"
 
     outcomes = {check.check: check.outcome for check in result.checks}
@@ -107,11 +115,13 @@ def outcome_for_wrong(result: Grade, wrong: WrongAnswer) -> Outcome:
     return "right" if outcomes[wrong.fails] == "fail" else "wrong"
 
 
-def _ask(structured: StructuredJudge, prompt: str) -> Verdict | None:
+def _ask(structured: StructuredJudge, prompt: str) -> FaithfulnessVerdict | None:
     """Retries an unreadable reply once, asking more plainly; None means still unreadable."""
     for attempt in (prompt, f"{prompt}\n{RETRY_NUDGE}"):
         try:
-            return Verdict.model_validate(structured.invoke(attempt))
+            return FaithfulnessVerdict.model_validate(
+                structured.invoke(attempt), from_attributes=True
+            )
         # Other providers may return None or a bare dict instead of raising.
         except OutputParserException, ValidationError:
             pass
@@ -119,12 +129,14 @@ def _ask(structured: StructuredJudge, prompt: str) -> Verdict | None:
     return None
 
 
-def _outcome(verdict: Verdict | None, passing: Reply) -> CheckOutcome:
+def _outcome(verdict: FaithfulnessVerdict | None, passing: Reply) -> CheckOutcome:
     if verdict is None:
         return "ungraded"
+    if verdict.answer == "unclear":
+        return "unclear"
 
     return "pass" if verdict.answer == passing else "fail"
 
 
-def _has_ungraded(result: Grade) -> bool:
-    return any(check.outcome == "ungraded" for check in result.checks)
+def _is_inconclusive(result: Grade) -> bool:
+    return any(check.outcome in ("unclear", "ungraded") for check in result.checks)
