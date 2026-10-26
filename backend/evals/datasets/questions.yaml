@@ -7,7 +7,7 @@ questions:
     type: how_it_works
     question: "When several promotions could apply to the same basket, which one is applied first?"
     key_facts:
-      - "Every promotion has a priority number, and the highest priority is applied first."
+      - "Every promotion has a priority number, and the one with the highest number is applied first."
       - "All promotions start with a priority of 0 unless someone changes it."
     files:
       - src/oscar/apps/offer/applicator.py

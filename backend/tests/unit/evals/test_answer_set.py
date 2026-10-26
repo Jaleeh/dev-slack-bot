@@ -111,4 +111,4 @@ def test_a_kind_used_once_is_rejected() -> None:
 def test_the_planted_answer_set_loads() -> None:
     answer_set = load_answer_set(ANSWERS_PATH, load_question_set(QUESTIONS_PATH))
 
-    assert len(answer_set.answers) == 10
+    assert len(answer_set.answers) == 9

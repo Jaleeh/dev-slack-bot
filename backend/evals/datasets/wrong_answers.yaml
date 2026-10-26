@@ -6,6 +6,7 @@
 #   vague           says nothing the asker can act on        -> fact-1
 #   other_question  correctly answers a different question   -> fact-1
 # `code` is a hand-picked excerpt from django-oscar 4.2.1, one "# <path>" line per file.
+# offer-repeat is left out: proving its answer takes more code than one excerpt holds.
 version: 1
 answers:
   # --- Offers ---
@@ -37,7 +38,7 @@ answers:
                   )
               )
     correct: >-
-      Every promotion has a priority number, and the one with the highest priority is
+      Every promotion has a priority number, and the one with the highest number is
       applied first. Promotions start with a priority of 0 unless someone changes it.
     wrong:
       - kind: wrong_rule
@@ -51,103 +52,6 @@ answers:
           Every promotion has a priority number, and the highest priority is applied
           first. Promotions start with a priority of 0 unless someone changes it.
           The priority can't be set higher than 10.
-
-  - question_id: offer-repeat
-    code: |
-      # src/oscar/apps/offer/applicator.py
-          def apply_offers(self, basket, offers):
-              applications = OfferApplications()
-              for offer in offers:
-                  num_applications = 0
-                  # Keep applying the offer until either
-                  # (a) We reach the max number of applications for the offer.
-                  # (b) The benefit can't be applied successfully.
-                  while num_applications < offer.get_max_applications(basket.owner):
-                      result = offer.apply_benefit(basket)
-                      num_applications += 1
-                      if not result.is_successful:
-                          break
-                      applications.add(offer, result)
-                      if result.is_final:
-                          break
-      # src/oscar/apps/offer/benefits.py
-      class MultibuyDiscountBenefit(Benefit):
-          _description = _("Cheapest product from %(range)s is free")
-
-          def apply(self, basket, condition, offer, **kwargs):
-              line_tuples = self.get_applicable_lines(offer, basket)
-              if not line_tuples:
-                  return ZERO_DISCOUNT
-
-              # Cheapest line gives free product
-              discount, line = line_tuples[0]
-              if line.quantity_with_offer_discount(offer) == 0:
-                  apply_discount(line, discount, 1, offer)
-
-                  affected_lines = [(line, discount, 1)]
-                  condition.consume_items(offer, basket, affected_lines)
-
-                  return BasketDiscount(discount)
-              else:
-                  return ZERO_DISCOUNT
-      # src/oscar/apps/offer/conditions.py
-          def is_satisfied(self, offer, basket):
-              """
-              Determines whether a given basket meets this condition
-              """
-              num_matches = 0
-              for line in basket.all_lines():
-                  if self.can_apply_condition(line):
-                      num_matches += line.quantity_without_offer_discount(offer)
-                  if num_matches >= self.value:
-                      return True
-              return False
-      # src/oscar/apps/offer/abstract_models.py
-          def get_applicable_lines(self, offer, basket, range=None):
-              """
-              Return the basket lines that are available to be discounted
-
-              :basket: The basket
-              :range: The range of products to use for filtering.  The fixed-price
-                      benefit ignores its range and uses the condition range
-              """
-              if range is None:
-                  range = self.range
-              if range is None:
-                  raise exceptions.ImproperlyConfigured(
-                      "Benefit of type %r has no range set. Custom benefit "
-                      "classes must either set a range or override "
-                      "get_applicable_lines." % self.type
-                  )
-              line_tuples = []
-              for line in basket.all_lines():
-                  product = line.product
-
-                  if not range.contains_product(product) or not self.can_apply_benefit(line):
-                      continue
-
-                  price = unit_price(offer, line)
-                  if not price:
-                      # Avoid zero price products
-                      continue
-                  line_tuples.append((price, line))
-
-              # We sort lines to be cheapest first to ensure consistent applications
-              return sorted(line_tuples, key=operator.itemgetter(0))
-    correct: >-
-      The customer gets one free item per basket, however many they buy. The free item
-      is the cheapest one in the deal.
-    wrong:
-      - kind: wrong_rule
-        fails: fact-1
-        answer: >-
-          The customer gets one free item for every three they buy, so six items get
-          two free. Each free item is the cheapest one in the deal.
-      - kind: vague
-        fails: fact-1
-        answer: >-
-          It depends on how the deal has been set up, so it's worth checking the
-          promotion's settings.
 
   # --- Vouchers ---
   - question_id: voucher-dates

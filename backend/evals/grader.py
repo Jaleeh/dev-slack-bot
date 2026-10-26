@@ -16,8 +16,9 @@ You are checking an answer given to a non-technical person about how an online s
 Question: {question}
 Answer: {answer}
 Fact: {fact}
-Does the answer state this fact? The wording may differ, but the meaning must match. \
-Reply yes or no."""
+Does the answer clearly state this fact? The wording may differ, but the meaning must match. \
+If the answer only hints at the fact, is vaguer than it, or is about something else, \
+the fact is not stated. Reply yes or no."""
 
 FAITHFULNESS_PROMPT = """\
 You are checking an answer against the shop's code it was based on.
@@ -107,10 +108,12 @@ def outcome_for_correct(result: Grade) -> Outcome:
 
 
 def outcome_for_wrong(result: Grade, wrong: WrongAnswer) -> Outcome:
-    if _is_inconclusive(result):
-        return "inconclusive"
-
     outcomes = {check.check: check.outcome for check in result.checks}
+
+    # Only the named check decides; an unclear one elsewhere doesn't undo the catch.
+    # An ungraded check anywhere means the judge broke, so the whole entry is in doubt.
+    if "ungraded" in outcomes.values() or outcomes[wrong.fails] == "unclear":
+        return "inconclusive"
 
     return "right" if outcomes[wrong.fails] == "fail" else "wrong"
 
