@@ -102,6 +102,18 @@ def test_any_ungraded_check_is_inconclusive() -> None:
     assert outcome_for_wrong(result, a_wrong("faithfulness")) == "inconclusive"
 
 
+def test_a_wrong_answer_failing_its_check_is_right_despite_unclear_faithfulness() -> None:
+    result = a_grade(faithfulness="unclear", **{"fact-1": "fail"})
+
+    assert outcome_for_wrong(result, a_wrong("fact-1")) == "right"
+
+
+def test_a_wrong_answer_with_its_check_unclear_is_inconclusive() -> None:
+    result = a_grade(faithfulness="unclear")
+
+    assert outcome_for_wrong(result, a_wrong("faithfulness")) == "inconclusive"
+
+
 def test_an_unclear_check_is_inconclusive_not_right() -> None:
     assert outcome_for_correct(a_grade(faithfulness="unclear")) == "inconclusive"
 
