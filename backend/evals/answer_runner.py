@@ -128,11 +128,14 @@ def evaluate_answers(config: AnswerRunConfig, judge: BaseChatModel, judge_model:
     question_set = load_question_set(config.questions_path)
     answer_set = load_answer_set(config.answers_path, question_set)
     questions = {question.id: question for question in question_set.questions}
+    total = len(answer_set.answers)
 
     answers = tuple(
         result
-        for entry in answer_set.answers
-        for result in _grade_entry(judge, entry, questions[entry.question_id])
+        for number, entry in enumerate(answer_set.answers, start=1)
+        for result in _logged(
+            f"[{number}/{total}]", _grade_entry(judge, entry, questions[entry.question_id])
+        )
     )
 
     return AnswerRun(
@@ -189,6 +192,14 @@ def _grade_entry(
             for number, (wrong, result) in numbered_wrongs
         ),
     )
+
+
+def _logged(position: str, results: tuple[AnswerResult, ...]) -> tuple[AnswerResult, ...]:
+    """Prints one progress line for a graded entry and passes its results through."""
+    described = " · ".join(_describe(result) for result in results)
+    print(f"{position} {results[0].question_id}: {described}", file=sys.stderr, flush=True)
+
+    return results
 
 
 def _describe(result: AnswerResult) -> str:
