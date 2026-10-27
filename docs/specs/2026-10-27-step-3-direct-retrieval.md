@@ -114,7 +114,7 @@ Four tools. Each takes paths relative to the repository root and returns plain t
 - `grep` searches every text file, not only `.py`. It skips binary files.
 - Every tool respects the repository's `.gitignore`.
 - A noise list is skipped by every tool. It is a setting (`SEARCH_SKIP`, glob patterns). The defaults are migrations, vendored folders (`node_modules`, `vendor`), lock files and minified files. *Our call.*
-- `outline` uses tree-sitter through `tree-sitter-language-pack`, which ships ready-built support for 372 languages. For a file it can't parse, it says so, and the agent falls back to `read_file`.
+- `outline` uses tree-sitter through `tree-sitter-language-pack`, which has ready-built grammars for 372 languages. Each grammar downloads the first time its language is used, so the Docker image must prefetch them (step 5). For a file it can't parse, it says so, and the agent falls back to `read_file`.
 - **Docs are searchable.** `grep` and `read_file` reach Markdown, reStructuredText and plain-text docs like any other text file.
 
 **Candidate library:** `grep-ast`, by the author of Aider. It shows each grep hit inside the function or class that holds it. Adopt it only if the learning tests show it fits. Otherwise build a plain grep with context lines.
