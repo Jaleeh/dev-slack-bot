@@ -86,15 +86,14 @@ def grade(judge: BaseChatModel, question: Question, answer: str, code: str) -> G
                 _ask(
                     structured,
                     FACT_PROMPT.format(question=question.question, answer=answer, fact=fact),
-                ),
-                passing="yes",
+                )
             ),
         )
         for number, fact in enumerate(question.key_facts, start=1)
     )
     faithfulness = CheckResult(
         check=FAITHFULNESS,
-        outcome=_outcome(_ask(faithfulness_judge, faithfulness_prompt), passing="yes"),
+        outcome=_outcome(_ask(faithfulness_judge, faithfulness_prompt)),
     )
 
     return Grade(checks=(*facts, faithfulness))
@@ -132,13 +131,13 @@ def _ask(structured: StructuredJudge, prompt: str) -> FaithfulnessVerdict | None
     return None
 
 
-def _outcome(verdict: FaithfulnessVerdict | None, passing: Reply) -> CheckOutcome:
+def _outcome(verdict: FaithfulnessVerdict | None) -> CheckOutcome:
     if verdict is None:
         return "ungraded"
     if verdict.answer == "unclear":
         return "unclear"
 
-    return "pass" if verdict.answer == passing else "fail"
+    return "pass" if verdict.answer == "yes" else "fail"
 
 
 def _is_inconclusive(result: Grade) -> bool:

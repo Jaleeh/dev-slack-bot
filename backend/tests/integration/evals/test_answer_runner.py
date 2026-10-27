@@ -1,15 +1,12 @@
 import json
 from pathlib import Path
 
-import httpx
 import pytest
 import yaml
-from langchain_core.language_models import BaseChatModel
 
-from evals import answer_runner
 from evals.answer_runner import AnswerRunConfig, Counts, evaluate_answers, main, save
 from tests.answer_datasets import a_question, a_question_set, an_answer_set, an_entry
-from tests.fake_judge import YES, FakeJudge, FunctionJudge
+from tests.fake_judge import YES, FakeJudge
 from tests.support import UNREACHABLE_URL
 
 JUDGE_MODEL = "fake:judge"
@@ -117,18 +114,10 @@ def test_main_stops_cleanly_on_an_unknown_model_provider(
     assert "olama:ornith:9b" in stderr
 
 
-def dropped_connection(prompt: str) -> object:
-    raise httpx.ReadError("connection closed mid-reply")
-
-
-def test_main_stops_cleanly_when_ollama_drops_mid_run(
+def test_main_stops_cleanly_when_ollama_is_not_running(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
-    def judge_that_drops(_: object) -> BaseChatModel:
-        return FunctionJudge(reply=dropped_connection)
-
     use_judge(monkeypatch, "ollama:ornith:9b", UNREACHABLE_URL)
-    monkeypatch.setattr(answer_runner, "build_judge", judge_that_drops)
     config = a_config(tmp_path)
 
     assert main(config) == 1
