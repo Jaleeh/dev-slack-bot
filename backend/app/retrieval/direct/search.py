@@ -9,7 +9,13 @@ from pathlib import Path
 import regex
 from tree_sitter_language_pack import DownloadError
 
-from app.retrieval.direct.errors import BadLineRange, CannotOutline, NotAFolder, NotText
+from app.retrieval.direct.errors import (
+    BadLineRange,
+    CannotOutline,
+    NotAFolder,
+    NotText,
+    SearchError,
+)
 from app.retrieval.direct.hits import (
     FileHits,
     compile_pattern,
@@ -47,6 +53,12 @@ class DirectSearch:
 
         entries = sorted(entry for entry in folder.iterdir() if is_visible(self.scope, entry))
         return "\n".join(entry.name + "/" if entry.is_dir() else entry.name for entry in entries)
+
+    def is_folder(self, path: str) -> bool:
+        try:
+            return resolve(self.scope, path).is_dir()
+        except SearchError:
+            return False
 
     def read_file(self, path: str, start_line: int = 1, end_line: int | None = None) -> str:
         """Numbered lines `start_line` to `end_line`, at most `MAX_READ_LINES` of them."""
