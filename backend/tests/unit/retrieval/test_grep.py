@@ -105,3 +105,18 @@ def test_grep_skips_a_file_it_cannot_read(repo: Path, search: DirectSearch) -> N
     (repo / "notes/locked.xyz").chmod(0)
 
     assert search.grep("voucher", "notes") == "notes/open.xyz (1 hits)\n  1> voucher"
+
+
+def test_grep_refuses_a_pattern_too_slow_to_run(repo: Path, search: DirectSearch) -> None:
+    (repo / "src/slow.txt").write_text("a" * 40 + "b\n")
+
+    with pytest.raises(BadPattern, match="too slow"):
+        search.grep("(a|aa)+$", "src/slow.txt")
+
+
+def test_grep_skips_translation_files(repo: Path, search: DirectSearch) -> None:
+    po = repo / "src/shop/locale/de/LC_MESSAGES/django.po"
+    po.parent.mkdir(parents=True)
+    po.write_text('msgid "voucher"\n')
+
+    assert search.grep("voucher", "src/shop/locale") == "no matches"

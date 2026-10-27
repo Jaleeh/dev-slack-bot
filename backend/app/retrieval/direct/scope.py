@@ -16,6 +16,7 @@ DEFAULT_SKIP = (
     "package-lock.json",
     "*.min.js",
     "*.min.css",
+    "**/locale/**/*.po",
 )
 ALWAYS_SKIP = ".git/"
 BINARY_SNIFF_BYTES = 8192
