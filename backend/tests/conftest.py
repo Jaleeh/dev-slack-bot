@@ -63,3 +63,14 @@ def ollama_judge(ollama_url: str) -> str:
         pytest.skip(f"{name} is not pulled; run: ollama pull {name}")
 
     return model
+
+
+@pytest.fixture(scope="session")
+def grammars() -> None:
+    """Downloads the Python and TypeScript grammars; skips the test when that fails."""
+    from tree_sitter_language_pack import DownloadError, download
+
+    try:
+        download(["python", "typescript"])
+    except DownloadError as error:
+        pytest.skip(f"tree-sitter grammars unavailable: {error}")
