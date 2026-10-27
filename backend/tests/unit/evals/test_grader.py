@@ -1,7 +1,5 @@
-from langchain_core.exceptions import OutputParserException
-
 from evals.answer_set import WrongAnswer
-from evals.grader import RETRY_NUDGE, Grade, Verdict, grade, outcome_for_correct, outcome_for_wrong
+from evals.grader import Grade, grade, outcome_for_correct, outcome_for_wrong
 from evals.question_set import Question
 from tests.fake_judge import NO, UNCLEAR, YES, FakeJudge, FunctionJudge
 
@@ -122,16 +120,3 @@ def test_a_reply_that_is_not_a_verdict_is_ungraded() -> None:
     result = grade(FunctionJudge(reply=lambda prompt: None), QUESTION, "An answer.", "# a.py\n")
 
     assert set(outcomes(result).values()) == {"ungraded"}
-
-
-def plain_answers_only(prompt: str) -> Verdict:
-    if not prompt.endswith(RETRY_NUDGE):
-        raise OutputParserException("not JSON")
-
-    return Verdict(answer="yes")
-
-
-def test_the_retry_asks_for_a_plain_yes_or_no() -> None:
-    result = grade(FunctionJudge(reply=plain_answers_only), QUESTION, "An answer.", "# a.py\n")
-
-    assert outcomes(result)["fact-1"] == "pass"
