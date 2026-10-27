@@ -51,11 +51,24 @@ def ollama_url() -> str:
 @pytest.fixture(scope="session")
 def ollama_judge(ollama_url: str) -> str:
     """The configured judge model; skips the test unless Ollama has it pulled."""
+    from evals.settings import EvalSettings
+
+    return require_pulled(EvalSettings().judge_model, ollama_url)
+
+
+@pytest.fixture(scope="session")
+def ollama_chat_model(ollama_url: str) -> str:
+    """The configured chat model's Ollama name; skips the test unless Ollama has it pulled."""
     from evals.settings import OLLAMA_PREFIX, EvalSettings
 
-    model = EvalSettings().judge_model
+    return require_pulled(EvalSettings().chat_model, ollama_url).removeprefix(OLLAMA_PREFIX)
+
+
+def require_pulled(model: str, ollama_url: str) -> str:
+    from evals.settings import OLLAMA_PREFIX
+
     if not model.startswith(OLLAMA_PREFIX):
-        pytest.skip(f"judge model {model} is not an Ollama model")
+        pytest.skip(f"model {model} is not an Ollama model")
 
     name = model.removeprefix(OLLAMA_PREFIX)
     pulled = {entry["name"] for entry in httpx.get(f"{ollama_url}/api/tags").json()["models"]}
