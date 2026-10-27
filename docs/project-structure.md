@@ -2,7 +2,7 @@
 
 Where code lives and which way imports point. This is a living document: update it in the same change that moves the tree.
 
-> **Status:** partly built. Built so far: `backend/app/{main.py,api,config,db}`, `backend/alembic`, `backend/evals/` (retrieval metrics, the question set, the sample repo fetch, the runner, the PII set, PII scoring and the answer grader so far), `backend/tests/{unit,integration,learning}`, `frontend/`, `Dockerfile`, `docker-compose.yml` and `Makefile`. Each remaining folder is created in the [build order](design-doc.html) step that first needs it.
+> **Status:** partly built. Built so far: `backend/app/{main.py,api,config,db}`, `backend/app/retrieval/direct/` (the search tools), `backend/alembic`, `backend/evals/` (retrieval metrics, the question set, the sample repo fetch, the runner, the PII set, PII scoring and the answer grader so far), `backend/tests/{unit,integration,learning}`, `frontend/`, `Dockerfile`, `docker-compose.yml` and `Makefile`. Each remaining folder is created in the [build order](design-doc.html) step that first needs it.
 
 ## Layout
 
@@ -16,7 +16,7 @@ dev-slack-bot/
 │   │   ├── api/                 # HTTP routes only (thin)
 │   │   ├── chat/                # chat adapters: slack/, web/
 │   │   ├── agent/               # graph.py, tools.py
-│   │   ├── retrieval/           # service.py, chunking.py (pure), models.py
+│   │   ├── retrieval/           # direct/ (search tools), service.py, chunking.py (pure), models.py
 │   │   ├── privacy/             # service.py, placeholders.py (pure), models.py
 │   │   ├── providers/           # chat + embedding model factory
 │   │   ├── repos/               # service.py, models.py

@@ -19,6 +19,7 @@ Versions: the newest stable release of each tool that works with the rest. Exact
 | Conversation state | LangGraph Postgres checkpointer | One chat thread maps to one LangGraph thread |
 | ORM and migrations | SQLAlchemy, Alembic | Schema and migrations |
 | PII redaction | Microsoft Presidio with a spaCy model | Detects PII and secrets locally; typed placeholders and restore |
+| Code search | tree-sitter (`tree-sitter-language-pack`), `pathspec` | Language-agnostic outlines and `.gitignore` rules for direct retrieval. Grammars download on first use. The Docker image must prefetch them (step 5). |
 | Chat | Slack Bolt for Python, Socket Mode | Slack adapter with no public URL |
 | GitHub | GitHub App, shallow `git` clones | Repository access and scheduled refresh |
 | Admin UI | Next.js static export, shadcn/ui, Tailwind | Setup wizard, settings, browser chat |
@@ -55,3 +56,4 @@ The answer grader asks a model yes/no questions about each answer. `EVAL_JUDGE_M
 | SQLite, sqlite-vec | Database | Postgres with pgvector is the industry standard and closer to what companies run |
 | Hand-built agent loop | Agent | LangGraph chosen as the widely used framework |
 | Realistic fake data | PII stand-ins | Typed placeholders restore exactly and never collide with real names in code |
+| `grep-ast` | Code search | Output size is hard to cap. A one-line enclosing-symbol label from the outline gives the same help. |
