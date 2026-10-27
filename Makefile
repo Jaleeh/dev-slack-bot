@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help up dev db down logs migrate test lint fmt eval eval-answers
+.PHONY: help up dev db down logs migrate test lint fmt eval eval-answers ask
 
 # Make creates .env from the example first if it is missing, then re-reads it.
 -include .env
@@ -57,3 +57,9 @@ eval: ## Score retrieval and PII redaction on the eval sets (fetches the sample 
 
 eval-answers: ## Grade the planted answers with the local model (needs Ollama running)
 	cd backend && uv run python -m evals.answer_runner
+
+# Passed through the environment, so quotes and apostrophes in the question survive.
+export Q
+
+ask: ## Answer Q="..." about the sample repo with the local agent (needs Ollama; takes minutes)
+	cd backend && uv run python -m evals.ask

@@ -31,7 +31,7 @@ from evals.run_record import (
     stop,
     write_record,
 )
-from evals.sample_repo import REPO_URLS, SampleRepo, SampleRepoError, fetch_sample_repo
+from evals.sample_repo import REPO_URLS, SampleRepoError, fetch_sample_repo, sample_repo_for
 
 
 class RunConfig(BaseModel):
@@ -150,7 +150,7 @@ def evaluate(config: RunConfig, contenders: Contenders) -> RunResult:
     question_set = load_question_set(config.questions_path)
     pii_set = load_pii_set(config.pii_path)
 
-    clone = fetch_sample_repo(_sample_repo(question_set, config.repo_urls), config.cache_dir)
+    clone = fetch_sample_repo(sample_repo_for(question_set, config.repo_urls), config.cache_dir)
     missing = _missing_files(question_set, clone)
     if missing:
         raise MissingFiles(missing)
@@ -174,14 +174,6 @@ def evaluate(config: RunConfig, contenders: Contenders) -> RunResult:
 
 def save(run: RunResult, results_dir: Path) -> Path:
     return write_record(run, results_dir / f"{run.started_at:{TIMESTAMP_FORMAT}}.json")
-
-
-def _sample_repo(question_set: QuestionSet, repo_urls: Mapping[str, str]) -> SampleRepo:
-    url = repo_urls.get(question_set.repo)
-    if url is None:
-        raise SampleRepoError(f"no URL known for repo {question_set.repo}")
-
-    return SampleRepo(name=question_set.repo, url=url, ref=question_set.ref)
 
 
 def _missing_files(question_set: QuestionSet, clone: Path) -> tuple[str, ...]:

@@ -8,6 +8,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from urllib.parse import quote
 
+from evals.question_set import QuestionSet
+
 REPO_URLS: Mapping[str, str] = {
     "django-oscar": "https://github.com/django-oscar/django-oscar.git",
 }
@@ -22,6 +24,17 @@ class SampleRepo:
     name: str
     url: str
     ref: str
+
+
+def sample_repo_for(
+    question_set: QuestionSet, repo_urls: Mapping[str, str] = REPO_URLS
+) -> SampleRepo:
+    """The repository and ref a question set was written against."""
+    url = repo_urls.get(question_set.repo)
+    if url is None:
+        raise SampleRepoError(f"no URL known for repo {question_set.repo}")
+
+    return SampleRepo(name=question_set.repo, url=url, ref=question_set.ref)
 
 
 def fetch_sample_repo(repo: SampleRepo, cache_dir: Path) -> Path:
