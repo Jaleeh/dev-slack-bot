@@ -59,13 +59,14 @@ def ollama_judge(ollama_url: str) -> str:
 @pytest.fixture(scope="session")
 def ollama_chat_model(ollama_url: str) -> str:
     """The configured chat model's Ollama name; skips the test unless Ollama has it pulled."""
-    from evals.settings import OLLAMA_PREFIX, EvalSettings
+    from app.config.agent import OLLAMA_PREFIX
+    from evals.settings import EvalSettings
 
     return require_pulled(EvalSettings().chat_model, ollama_url).removeprefix(OLLAMA_PREFIX)
 
 
 def require_pulled(model: str, ollama_url: str) -> str:
-    from evals.settings import OLLAMA_PREFIX
+    from app.config.agent import OLLAMA_PREFIX
 
     if not model.startswith(OLLAMA_PREFIX):
         pytest.skip(f"model {model} is not an Ollama model")
