@@ -32,6 +32,7 @@ ADR numbers are assigned in the order ADRs are created, not by topic.
 - [ADR-002: How the bot finds code to answer a question](adr-002-how-the-bot-finds-code-to-answer-a-question.md)
 - [ADR-003: How repositories stay up to date](adr-003-how-repositories-stay-up-to-date.md)
 - [ADR-004: How the answer grader judges answers](adr-004-how-the-answer-grader-judges-answers.md)
+- [ADR-005: Which model answers questions](adr-005-which-model-answers-questions.md)
 
 ## Key considerations
 

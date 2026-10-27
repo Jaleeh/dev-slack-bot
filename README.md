@@ -22,6 +22,8 @@ Ask it in Slack how a business rule works, or whether a reported problem is a bu
 
 `make eval-answers` checks that the answer grader passes right answers and fails planted wrong ones, using a local model. It takes several minutes. To set it up, install the [Ollama app](https://ollama.com/download) from its `.dmg`, then run `ollama pull gemma4:e4b` (the grader) and `ollama pull ornith:9b` (the chat model).
 
+`make ask Q="A guest says their voucher code is rejected. Why?"` answers a question about the sample repository with the local agent. It prints each search and read as it happens, then the draft, the plain-English answer and the tool calls, tokens and seconds used. One question takes several minutes. It needs `ollama pull ornith:9b`.
+
 `make dev`, `make test` and `make lint` need [uv](https://docs.astral.sh/uv/), Node 24 (`nvm use` reads `.nvmrc`) and pnpm on your machine.
 
 ## Why

@@ -19,7 +19,7 @@ Versions: the newest stable release of each tool that works with the rest. Exact
 | Conversation state | LangGraph Postgres checkpointer | One chat thread maps to one LangGraph thread |
 | ORM and migrations | SQLAlchemy, Alembic | Schema and migrations |
 | PII redaction | Microsoft Presidio with a spaCy model | Detects PII and secrets locally; typed placeholders and restore |
-| Code search | tree-sitter (`tree-sitter-language-pack`), `pathspec` | Language-agnostic outlines and `.gitignore` rules for direct retrieval. Grammars download on first use. The Docker image must prefetch them (step 5). |
+| Code search | tree-sitter (`tree-sitter-language-pack`), `pathspec`, `regex` | Language-agnostic outlines, `.gitignore` rules and a per-line time limit on grep patterns for direct retrieval. Grammars download on first use. The Docker image must prefetch them (step 5). |
 | Chat | Slack Bolt for Python, Socket Mode | Slack adapter with no public URL |
 | GitHub | GitHub App, shallow `git` clones | Repository access and scheduled refresh |
 | Admin UI | Next.js static export, shadcn/ui, Tailwind | Setup wizard, settings, browser chat |
@@ -37,6 +37,8 @@ Versions: the newest stable release of each tool that works with the rest. Exact
 Evals score a labelled question set on recall@k, MRR, faithfulness, redaction catch rate, cost and latency. Scoring is hand-written ([ADR-001](adrs/adr-001-how-answers-and-retrieval-are-evaluated.md)). Ragas may be added later as a cross-check.
 
 The answer grader asks a model yes/no questions about each answer. `EVAL_JUDGE_MODEL` picks the grader model, `ollama:gemma4:e4b` in `.env.example`; left empty, it grades with `CHAT_MODEL` (default `ollama:ornith:9b`). The faithfulness check may reply `unclear`, which counts as inconclusive, never a pass. `OLLAMA_BASE_URL` says where Ollama listens. Replies are read with Ollama's structured outputs through LangChain.
+
+The agent's settings need no database, so `make ask` and the evals run without Postgres. `CHAT_MODEL` drives the agent. `AGENT_THINKING` turns thinking on in the search loop (the rewrite step never thinks). `AGENT_MAX_TOOL_CALLS` (15) and `AGENT_MAX_TOKENS` (1,000,000) cap one question; at either limit the model must answer with what it has. `AGENT_CONTEXT_TOKENS` (32,768) is the context size passed to Ollama. `RETRIEVAL` has one value, `direct`. `SEARCH_SKIP` is a JSON list of globs every search tool skips; unset, it skips migrations, vendored folders, lock files, minified files and translation files. The model choice is in [ADR-005](adrs/adr-005-which-model-answers-questions.md).
 
 ## Packaging and CI
 
