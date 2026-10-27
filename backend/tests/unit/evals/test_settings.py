@@ -32,3 +32,9 @@ def test_ollama_judge_uses_the_configured_url() -> None:
     assert isinstance(judge, ChatOllama)
     assert judge.base_url == "http://ollama:1"
     assert judge.temperature == 0
+
+
+def test_a_bad_agent_setting_does_not_stop_the_judge(monkeypatch: pytest.MonkeyPatch) -> None:
+    monkeypatch.setenv("SEARCH_SKIP", "docs/")
+
+    assert EvalSettings(_env_file=None).judge_model == "ollama:ornith:9b"
