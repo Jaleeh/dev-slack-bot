@@ -1,9 +1,10 @@
 """Grep hits in a file, the cap on how many are shown, and how they are written out."""
 
-import re
 from collections.abc import Iterator, Sequence
 from dataclasses import dataclass
 from itertools import accumulate, groupby
+
+import regex
 
 from app.retrieval.direct.errors import BadPattern
 from app.retrieval.direct.lines import clip
@@ -11,6 +12,8 @@ from app.retrieval.direct.outline import Symbol, enclosing
 
 MAX_SHOWN = 40
 CONTEXT_LINES = 1
+# Per line, so one runaway pattern stops the whole grep almost at once.
+MATCH_TIMEOUT_SECONDS = 0.1
 
 
 @dataclass(frozen=True)
@@ -28,15 +31,22 @@ class ShownHits:
     hits: tuple[int, ...]
 
 
-def compile_pattern(pattern: str) -> re.Pattern[str]:
+def compile_pattern(pattern: str) -> regex.Pattern[str]:
     try:
-        return re.compile(pattern, re.IGNORECASE)
-    except (re.error, RecursionError) as error:
+        return regex.compile(pattern, regex.IGNORECASE)
+    except (regex.error, RecursionError) as error:
         raise BadPattern(pattern, str(error)) from error
 
 
-def hit_lines(regex: re.Pattern[str], lines: Sequence[str]) -> tuple[int, ...]:
-    return tuple(n for n, line in enumerate(lines, 1) if regex.search(line))
+def hit_lines(pattern: regex.Pattern[str], lines: Sequence[str]) -> tuple[int, ...]:
+    try:
+        return tuple(
+            n
+            for n, line in enumerate(lines, 1)
+            if pattern.search(line, timeout=MATCH_TIMEOUT_SECONDS)
+        )
+    except TimeoutError as error:
+        raise BadPattern(pattern.pattern, "too slow; use a simpler pattern") from error
 
 
 def within_cap(found: Sequence[FileHits]) -> tuple[ShownHits, ...]:

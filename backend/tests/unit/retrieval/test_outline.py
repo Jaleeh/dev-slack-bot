@@ -2,7 +2,7 @@ from pathlib import Path
 
 import pytest
 
-from app.retrieval.direct.errors import CannotOutline
+from app.retrieval.direct.errors import CannotOutline, NotText
 from app.retrieval.direct.outline import Symbol, enclosing
 from app.retrieval.direct.search import DirectSearch
 
@@ -41,6 +41,13 @@ def test_outline_of_an_unknown_file_type_says_use_read_file(
         search.outline("notes.xyz")
 
     assert raised.value.path == "notes.xyz"
+
+
+def test_outline_of_an_unreadable_file_raises_not_text(repo: Path, search: DirectSearch) -> None:
+    (repo / "src/shop/basket.py").chmod(0)
+
+    with pytest.raises(NotText):
+        search.outline("src/shop/basket.py")
 
 
 def test_enclosing_returns_the_chain_from_outer_to_inner() -> None:

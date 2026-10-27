@@ -1,12 +1,12 @@
 """The search tools the agent calls; each returns plain text for the model."""
 
 import logging
-import re
 from collections.abc import Iterable
 from dataclasses import dataclass
 from itertools import chain
 from pathlib import Path
 
+import regex
 from tree_sitter_language_pack import DownloadError
 
 from app.retrieval.direct.errors import BadLineRange, CannotOutline, NotAFolder, NotText
@@ -73,6 +73,8 @@ class DirectSearch:
         name = relative(self.scope, absolute)
         if absolute.is_dir():
             raise CannotOutline(name, "it is a folder")
+        if not is_text(absolute):
+            raise NotText(name)
 
         lines = read_lines(absolute)
         header = f"{name} outline ({len(lines)} lines)"
@@ -80,8 +82,8 @@ class DirectSearch:
 
     def grep(self, pattern: str, path: str = ".") -> str:
         """Case-insensitive regex hits in the text files under `path`, grouped by file."""
-        regex = compile_pattern(pattern)
-        every_file = (self.file_hits(regex, file) for file in self.searchable(path))
+        compiled = compile_pattern(pattern)
+        every_file = (self.file_hits(compiled, file) for file in self.searchable(path))
         found = [hits for hits in every_file if hits.hits]
         if not found:
             return "no matches"
@@ -90,9 +92,9 @@ class DirectSearch:
         sections = (describe_file(part, self.labels(part.file)) for part in shown)
         return "\n".join(chain(*sections, describe_rest(found, shown)))
 
-    def file_hits(self, regex: re.Pattern[str], file: Path) -> FileHits:
+    def file_hits(self, pattern: regex.Pattern[str], file: Path) -> FileHits:
         lines = read_lines(file)
-        return FileHits(relative(self.scope, file), lines, hit_lines(regex, lines))
+        return FileHits(relative(self.scope, file), lines, hit_lines(pattern, lines))
 
     def searchable(self, path: str) -> Iterable[Path]:
         target = resolve(self.scope, path)
