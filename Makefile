@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help up dev db down logs migrate test lint fmt eval eval-answers ask eval-agent
+.PHONY: help up dev db down logs migrate test test-models lint fmt eval eval-answers ask eval-agent
 
 # Make creates .env from the example first if it is missing, then re-reads it.
 -include .env
@@ -43,6 +43,9 @@ migrate: ## Run database migrations in the running app container
 test: db ## Run backend and frontend tests (needs uv and pnpm on the host)
 	cd backend && uv run pytest
 	cd frontend && pnpm test
+
+test-models: ## Run the learning tests that call real models (needs Ollama; about 2 min)
+	cd backend && uv run pytest -m model
 
 lint: ## Run linters, type checks and format checks
 	cd backend && uv run ruff check . && uv run ruff format --check . && uv run mypy

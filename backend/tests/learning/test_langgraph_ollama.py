@@ -1,8 +1,11 @@
 """Pins how ChatOllama calls tools with thinking on, for the search agent."""
 
+import pytest
 from langchain_core.messages import AIMessage
 from langchain_core.tools import tool
 from langchain_ollama import ChatOllama
+
+pytestmark = pytest.mark.model
 
 
 @tool

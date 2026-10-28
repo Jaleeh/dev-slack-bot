@@ -28,6 +28,8 @@ Ask it in Slack how a business rule works, or whether a reported problem is a bu
 
 `make dev`, `make test` and `make lint` need [uv](https://docs.astral.sh/uv/), Node 24 (`nvm use` reads `.nvmrc`) and pnpm on your machine.
 
+`make test` skips the few learning tests that call a real model, since they take over a minute. Run them with `make test-models` after upgrading Ollama, LangChain or a model.
+
 ## Why
 
 - **Fewer interruptions.** Routine "how does X work?" questions go to the bot, not a developer.
