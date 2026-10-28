@@ -1,8 +1,8 @@
 # Architectural Decision Records (ADRs)
 
-These ADRs record architectural decisions: each is a short, self-contained record of one decision, the options weighed, and why we chose as we did. They exist to steer implementation, keep it consistent, and serve as a defensible audit trail that the design was reasoned through.
+These ADRs record architectural decisions: each is a short, self-contained record of one decision, the options weighed, and the reasons for the choice. They exist to steer implementation, keep it consistent, and serve as a defensible audit trail that the design was reasoned through.
 
-ADRs are added as decisions warrant one; this index is not a complete catalogue of every choice the pipeline has made — the slice specs in [`../specs/`](../specs/) carry the rest.
+ADRs are added as decisions warrant one, so this index is not a complete catalogue of every choice the pipeline has made. The slice specs in [`../specs/`](../specs/) record the rest.
 
 ## Format
 
@@ -37,5 +37,5 @@ ADR numbers are assigned in the order ADRs are created, not by topic.
 ## Key considerations
 
 - An ADR is short and concise.
-- No code samples — it is about the decision, not the implementation.
+- No code samples. An ADR records the decision, not the implementation.
 - Titles describe what is being decided, not the decision reached, and avoid naming specific technologies where possible.
