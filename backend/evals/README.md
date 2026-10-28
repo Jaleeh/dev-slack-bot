@@ -35,6 +35,19 @@ Until Presidio is added, the redactor is a stand-in that changes nothing. Its ca
 
 It needs Ollama running with the model pulled (see the main README), and takes several minutes. It prints whether the grader got each answer right and saves the run, including which model graded it, to `results/answers-<time>.json`. `CHAT_MODEL`, `EVAL_JUDGE_MODEL` and `OLLAMA_BASE_URL` in `.env` choose the model.
 
+## Running the agent
+
+`make eval-agent` runs the real agent once per question and scores two things from that one run:
+
+- **Retrieval:** recall@5, recall@10 and MRR over the files the agent read or outlined, in the order it first touched them. Files that only showed up in grep hits don't count.
+- **Answers:** the grader above, on the final answer. Faithfulness is judged against the text the agent's tool calls returned.
+
+**A full run takes about 3 hours.** `make eval-agent IDS="offer-order voucher-guest-rejected"` runs only the named questions. An unknown id stops the run before any model call.
+
+When the agent gives up, the asker gets "I couldn't work this out from the code". That answer isn't graded: it scores 0 on facts, stays out of the faithfulness counts and is counted as **empty**.
+
+The results go to `results/agent-<time>.json`, rewritten after every question. If a run dies partway, the finished questions are kept, and the rest can be rerun with `IDS=`. Each file records the agent and judge settings it ran with.
+
 ## Files
 
 | File | Holds |
@@ -56,6 +69,9 @@ It needs Ollama running with the model pulled (see the main README), and takes s
 | `answer_set.py` | Loads the planted answers and rejects badly formed entries |
 | `grader.py` | Asks the model one yes/no question per check and decides whether the grader got an answer right |
 | `answer_runner.py` | Grades every planted answer and saves the results |
+| `ask.py` | Answers one question with the agent, showing each search and read |
+| `agent_scores.py` | Scores one agent run: which questions to run, the files it found, run totals |
+| `agent_runner.py` | Runs the agent on the questions, grades its answers and saves the results |
 
 ## More
 

@@ -24,6 +24,8 @@ Ask it in Slack how a business rule works, or whether a reported problem is a bu
 
 `make ask Q="A guest says their voucher code is rejected. Why?"` answers a question about the sample repository with the local agent. It prints each search and read as it happens, then the draft, the plain-English answer and the tool calls, tokens and seconds used. One question takes several minutes. It needs `ollama pull ornith:9b`.
 
+`make eval-agent` runs the agent on every eval question and scores, from that one run, whether it found the right files and how many key facts its answers state. **A full run takes about 3 hours.** `make eval-agent IDS="offer-order voucher-guest-rejected"` runs only those questions. It needs both models above. If a run dies partway, the questions it finished are kept in `backend/evals/results/`.
+
 `make dev`, `make test` and `make lint` need [uv](https://docs.astral.sh/uv/), Node 24 (`nvm use` reads `.nvmrc`) and pnpm on your machine.
 
 ## Why

@@ -2,7 +2,7 @@
 
 Where code lives and which way imports point. This is a living document: update it in the same change that moves the tree.
 
-> **Status:** partly built. Built so far: `backend/app/{main.py,api,config,db}`, `backend/app/retrieval/direct/` (the search tools), `backend/app/agent/` (the search agent) and `backend/app/config/agent.py` (its settings), `backend/alembic`, `backend/evals/` (retrieval metrics, the question set, the sample repo fetch, the runner, the PII set, PII scoring, the answer grader and `ask.py` so far), `backend/tests/{unit,integration,learning}`, `frontend/`, `Dockerfile`, `docker-compose.yml` and `Makefile`. Each remaining folder is created in the [build order](design-doc.html) step that first needs it.
+> **Status:** partly built. Built so far: `backend/app/{main.py,api,config,db}`, `backend/app/retrieval/direct/` (the search tools), `backend/app/agent/` (the search agent) and `backend/app/config/agent.py` (its settings), `backend/alembic`, `backend/evals/` (retrieval metrics, the question set, the sample repo fetch, the runner, the PII set, PII scoring, the answer grader, `ask.py` and the agent eval `agent_runner.py` so far), `backend/tests/{unit,integration,learning}`, `frontend/`, `Dockerfile`, `docker-compose.yml` and `Makefile`. Each remaining folder is created in the [build order](design-doc.html) step that first needs it.
 
 ## Layout
 
@@ -22,7 +22,7 @@ dev-slack-bot/
 │   │   ├── repos/               # service.py, models.py
 │   │   ├── config/              # settings, agent settings, secret encryption
 │   │   └── db/                  # session + base only
-│   ├── evals/                   # datasets/, runner, ask.py, results/ and .cache/ (git-ignored)
+│   ├── evals/                   # datasets/, runners, ask.py, results/ and .cache/ (git-ignored)
 │   └── tests/
 │       ├── unit/                # pure logic, fast
 │       ├── integration/         # real Postgres; LLM, Slack and GitHub mocked
