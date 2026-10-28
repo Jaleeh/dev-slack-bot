@@ -9,6 +9,10 @@ from langchain_core.outputs import ChatResult
 from langchain_core.runnables import Runnable
 from pydantic import Field
 
+from app.agent.guardrails import Limits
+
+ROOMY = Limits(max_tool_calls=15, max_tokens=1_000_000)
+
 
 class ScriptedModel(GenericFakeChatModel):
     """Replies with its scripted messages in turn and keeps every input it was sent.
@@ -39,3 +43,14 @@ class ScriptedModel(GenericFakeChatModel):
 
 def scripted(*replies: AIMessage | str) -> ScriptedModel:
     return ScriptedModel(messages=iter(replies))
+
+
+def calls(*tool_calls: tuple[str, dict[str, object]], tokens: int = 0) -> AIMessage:
+    return AIMessage(
+        "",
+        tool_calls=[
+            {"name": name, "args": args, "id": f"call-{n}"}
+            for n, (name, args) in enumerate(tool_calls)
+        ],
+        usage_metadata={"input_tokens": tokens, "output_tokens": 0, "total_tokens": tokens},
+    )

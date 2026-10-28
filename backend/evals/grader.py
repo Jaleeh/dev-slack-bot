@@ -100,7 +100,7 @@ def grade(judge: BaseChatModel, question: Question, answer: str, code: str) -> G
 
 
 def outcome_for_correct(result: Grade) -> Outcome:
-    if _is_inconclusive(result):
+    if is_inconclusive(result.checks):
         return "inconclusive"
 
     return "right" if all(check.outcome == "pass" for check in result.checks) else "wrong"
@@ -140,5 +140,5 @@ def _outcome(verdict: FaithfulnessVerdict | None) -> CheckOutcome:
     return "pass" if verdict.answer == "yes" else "fail"
 
 
-def _is_inconclusive(result: Grade) -> bool:
-    return any(check.outcome in ("unclear", "ungraded") for check in result.checks)
+def is_inconclusive(checks: Sequence[CheckResult]) -> bool:
+    return any(check.outcome in ("unclear", "ungraded") for check in checks)
