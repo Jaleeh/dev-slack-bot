@@ -56,6 +56,13 @@ class ToolCallRecord:
     output: str
     outcome: Outcome
 
+    @property
+    def signature(self) -> str:
+        """The call as the model made it, such as `grep(pattern='voucher')`."""
+        args = ", ".join(f"{name}={value!r}" for name, value in self.args.items())
+
+        return f"{self.name}({args})"
+
 
 @dataclass(frozen=True)
 class ModelCall:
@@ -115,8 +122,11 @@ class Agent:
         }
 
         state = graph.invoke(initial_state(question, repo_map(self.search)), config)
+        result = to_result(state, time.monotonic() - started)
 
-        return to_result(state, time.monotonic() - started)
+        # The tools accept absolute and `../` paths, so one file can be named several ways.
+        repo_files = (self.search.repo_path(path) for path in result.files)
+        return replace(result, files=tuple(dict.fromkeys(repo_files)))
 
 
 def build_agent(settings: AgentSettings, root: Path) -> Agent:

@@ -54,6 +54,10 @@ class DirectSearch:
         entries = sorted(entry for entry in folder.iterdir() if is_visible(self.scope, entry))
         return "\n".join(entry.name + "/" if entry.is_dir() else entry.name for entry in entries)
 
+    def repo_path(self, path: str) -> str:
+        """The repo-relative form of any path the tools accept, such as an absolute or `../` one."""
+        return relative(self.scope, resolve(self.scope, path))
+
     def is_folder(self, path: str) -> bool:
         try:
             return resolve(self.scope, path).is_dir()

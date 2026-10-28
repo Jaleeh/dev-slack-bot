@@ -1,16 +1,13 @@
 from pathlib import Path
 
 import pytest
-from langchain_core.messages import AIMessage
 
 from app.agent.graph import Agent, AgentResult, repo_map
 from app.agent.guardrails import Limits, Outcome, StopReason
 from app.agent.prompts import ANSWER_NOW, FALLBACK, SEARCH_FIRST
 from app.retrieval.direct.scope import open_scope
 from app.retrieval.direct.search import DirectSearch
-from tests.unit.agent.scripted_model import ScriptedModel, scripted
-
-ROOMY = Limits(max_tool_calls=15, max_tokens=1_000_000)
+from tests.scripted_model import ROOMY, ScriptedModel, calls, scripted
 
 
 @pytest.fixture
@@ -26,17 +23,6 @@ def search(tmp_path: Path) -> DirectSearch:
         (tmp_path / name).write_text(text)
 
     return DirectSearch(open_scope(tmp_path))
-
-
-def calls(*tool_calls: tuple[str, dict[str, object]], tokens: int = 0) -> AIMessage:
-    return AIMessage(
-        "",
-        tool_calls=[
-            {"name": name, "args": args, "id": f"call-{n}"}
-            for n, (name, args) in enumerate(tool_calls)
-        ],
-        usage_metadata={"input_tokens": tokens, "output_tokens": 0, "total_tokens": tokens},
-    )
 
 
 def grep(pattern: str = "voucher") -> tuple[str, dict[str, object]]:
@@ -161,6 +147,23 @@ def test_files_are_listed_in_first_touched_order(search: DirectSearch) -> None:
     result = ask(search, search_model, scripted("plain"))
 
     assert result.files == ("src/basket.py", "src/voucher.py")
+
+
+def test_files_read_by_absolute_or_parent_path_are_listed_repo_relative(
+    search: DirectSearch, tmp_path: Path
+) -> None:
+    search_model = scripted(
+        calls(
+            ("read_file", {"path": f"{tmp_path}/src/voucher.py"}),
+            ("read_file", {"path": f"../{tmp_path.name}/src/basket.py"}),
+            ("read_file", {"path": "src/voucher.py"}),
+        ),
+        "draft",
+    )
+
+    result = ask(search, search_model, scripted("plain"))
+
+    assert result.files == ("src/voucher.py", "src/basket.py")
 
 
 def test_repo_map_lists_two_levels_and_skips_noise(search: DirectSearch) -> None:
