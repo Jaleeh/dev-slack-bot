@@ -2,7 +2,7 @@
 
 ## Context and Problem Statement
 
-The bot answers from local clones of each repository and, with vector search, from an index built from those clones. Both must follow the code as it changes, or answers describe code that no longer exists. The first release needs no public URL and runs as two containers, the app and Postgres, so the way the bot learns about changes is constrained.
+The bot answers from local clones of each repository and, with vector search, from an index built from those clones. Both must follow the code as it changes, or answers describe code that no longer exists. The first release needs no public URL and runs as two containers, the app and Postgres, so the way the bot detects changes is constrained.
 
 ## Acceptance Criteria
 
@@ -33,4 +33,4 @@ The bot answers from local clones of each repository and, with vector search, fr
 
 ## Decision Outcome
 
-Scheduled polling on an interval the admin can change, re-indexing only changed files, plus a manual refresh in the admin UI. Polling is the only option that meets every criterion on its own. Code changes arrive in bursts a few times a day, so a short interval is close enough for people asking how the code works. Manual refresh covers the gap after an urgent change, such as a hotfix the bot should know about before the next interval. Both run the same refresh, which holds a lock per repository, so a manual refresh during a scheduled one cannot run alongside it. Re-indexing a file replaces its chunks rather than adding to them, so a repeated or interrupted refresh leaves no duplicates. Which lock, and whether a second request waits or is skipped, are left to the step 7 spec. The indexer takes a list of changed files as its input, so a webhook can trigger it later without changing it, if a later release adds a public URL. Where the scheduler runs, and what a question sees while an index is being rebuilt, are left to the step 7 spec.
+Scheduled polling on an interval the admin can change, re-indexing only changed files, plus a manual refresh in the admin UI. Polling is the only option that meets every criterion on its own. Code changes arrive in bursts a few times a day, so a short interval is close enough for people asking how the code works. Manual refresh covers the gap after an urgent change, such as a hotfix that should reach the bot before the next interval. Both run the same refresh, which holds a lock per repository, so a manual refresh during a scheduled one cannot run alongside it. Re-indexing a file replaces its chunks rather than adding to them, so a repeated or interrupted refresh leaves no duplicates. The indexer takes a list of changed files as its input, so a webhook can trigger it later without changing it, if a later release adds a public URL. The step 7 spec settles which lock, whether a second request waits or is skipped, where the scheduler runs, and what a question sees while an index is being rebuilt.

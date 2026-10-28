@@ -27,4 +27,4 @@ The evals score retrieval, answers and redaction before and after every change, 
 
 ## Decision Outcome
 
-Hand-written scoring. It meets every criterion, and it serves the learning goal by keeping nothing hidden. The AI grader asks yes/no questions per key fact rather than giving a 1–10 score, and it is checked once against the maintainer's own grades. Ragas may be added later as a cross-check on the grader, not as a replacement.
+Hand-written scoring. It meets every criterion, and it serves the learning goal by keeping nothing hidden. The AI grader asks yes/no questions per key fact rather than giving a score from 1 to 10, and it is checked once against the maintainer's own grades. Ragas may be added later as a cross-check on the grader, not as a replacement.

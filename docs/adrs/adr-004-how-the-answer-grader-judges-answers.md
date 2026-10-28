@@ -36,14 +36,24 @@ The grader must be trustworthy before the bot itself is scored in step 7, becaus
 
 ### How the faithfulness question is worded
 
-1. "Does the answer state anything the code doesn't show?" Here yes means made up. The models missed made-up details or flagged correct answers.
-2. "Is everything in the answer supported by this code?" Here yes means faithful. Accurate, but the verdict on borderline answers changed between runs.
-3. Wording 2, plus a third reply, "unclear", for when the code shown isn't enough to tell. As accurate as wording 2, and more consistent.
+**Wording 1:** "Does the answer state anything the code doesn't show?" (yes means made up)
+- Con: the models missed made-up details or flagged correct answers.
+
+**Wording 2:** "Is everything in the answer supported by this code?" (yes means faithful)
+- Pro: accurate.
+- Con: the verdict on borderline answers changed between runs.
+
+**Wording 3:** wording 2, plus a third reply, "unclear", for when the code shown isn't enough to tell
+- Pro: as accurate as wording 2, and more consistent.
+- Con: an "unclear" reply gives no verdict, so that result is inconclusive.
 
 ### How the fact question is worded
 
-1. "Does the answer state this fact?" The grader passed answers that only hinted at the fact.
-2. "Does the answer clearly state this fact? A hint, vaguer wording, or a different point doesn't count." All 45 fact checks were run 5 times each. 44 gave the right verdict every time. The other one failed because the fact itself was worded ambiguously, and the fact has since been reworded.
+**Wording 1:** "Does the answer state this fact?"
+- Con: the grader passed answers that only hinted at the fact.
+
+**Wording 2:** "Does the answer clearly state this fact? A hint, vaguer wording, or a different point doesn't count."
+- Pro: all 45 fact checks were run 5 times each, and 44 gave the right verdict every time. The other one failed because the fact itself was worded ambiguously, and the fact has since been reworded.
 
 ## Decision Outcome
 
@@ -51,7 +61,7 @@ The smaller model grades by default, using fact wording 2 and faithfulness wordi
 
 The rules for scoring:
 
-- **"Unclear" never counts as a pass.** The result is marked inconclusive. An honest "can't tell" is better than a confident wrong verdict.
+- **"Unclear" never counts as a pass.** The result is marked inconclusive. An "unclear" reply is better than a wrong verdict.
 - **A wrong answer is judged only on its named check.** It counts as caught when that check fails. An "unclear" on any other check doesn't change that. If any check gets no usable reply, the result is still inconclusive.
 - **Every key fact must be provable from the code the grader is shown.** Otherwise even a perfect answer fails. One fact about which offer wins a tie depended on how the programming language sorts lists, which no code snippet shows, so it was removed. One question was dropped from the wrong-answer set because proving its correct answer needs more code than a snippet can hold. Some snippets were made longer where a good search would have found the missing lines.
 - **One run proves little.** The model is set to give the same reply to the same input every time (temperature 0), yet its verdict still sometimes changes between runs. A correct answer was once flagged as made up, then passed 5 times out of 5 when rerun. A plainly wrong fact was once passed, then caught 10 times out of 10. So any change to the grader is tested by running the affected checks 5 or 10 times, not by one full run. The final full run got 26 of 27 right, and the one miss was a change of this kind.
