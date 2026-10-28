@@ -30,6 +30,38 @@ The bot answers questions about a repository, so it must first find the code tha
 - Pro: a trial starts on direct search, and the evals measure all three on the same questions. Serves the learning goal by building both methods.
 - Con: two retrieval methods to build and maintain. Hybrid has the highest cost and setup, and the agent can pick the wrong tool.
 
+The options below add to a retrieval method rather than replace one.
+
+**Query rewriting** (the model turns a plain-word question into likely code terms, or a guess at the code, before it searches)
+- Pro: needs no index, so it works with direct search and fits a trial. Aims straight at plain-word questions.
+- Con: one more model call per question. A wrong guess sends the search the wrong way.
+
+**Plain-language summary index** (the model writes a plain-language summary of each file, and the summaries are embedded instead of the code)
+- Pro: plain-word questions are matched against plain words, not code. Summaries are shorter than code, so less code reaches the embedding provider.
+- Con: every changed file is summarised again on each refresh, which costs model calls. A summary can leave out the detail a question needs.
+
+**Keyword and vector search merged in one tool** (one ranked list from both, in the same database)
+- Pro: finds exact names and plain-word matches in one call. Gives a small model one search tool, not two to choose between. Adds no container.
+- Con: the merge needs tuning, and it still needs the vector index.
+
+**Symbol tools** (tools that find where a name is defined and where it is called)
+- Pro: follows leads into callers precisely. Needs no embeddings.
+- Con: needs a parser for each language. More tools for a small model to choose between.
+
+**Reranking** (a second model reorders the top search results)
+- Pro: usually puts the right code nearer the top.
+- Con: another model to run, and the local model server may not serve one.
+
+**Graph of the whole repository** (a model extracts entities and links across every file)
+- Pro: can answer questions that span many files.
+- Con: costly to build, and the code keeps changing, so it is rebuilt often.
+
+**Whole files in the prompt** (skip search and send large parts of the repository)
+- Pro: nothing to search or index.
+- Con: a real repository does not fit a local model's context, and every file reaches the chat provider.
+
 ## Decision Outcome
 
 An agent with both retrieval methods, selected by a setting. It is the only option that meets every criterion: direct search lets a trial start with nothing, and the agent can follow leads within its per-question limit. The evals pick the default setting, so no method is assumed best before it is measured. A fixed pipeline is not shipped, but it is kept in the evals as a baseline once vector search exists, so every agent mode is measured against the cheapest approach. If the evals show the agent's extra tokens buy little accuracy, this ADR should be revisited.
+
+Query rewriting is measured on direct search first, because it needs no index. The merged keyword and vector tool, and the plain-language summary index, are measured with vector search as more settings, on the same questions. Each one is kept only if the evals show it helps. Symbol tools and reranking wait until the evals show a gap they would close. A graph of the whole repository and whole files in the prompt are not pursued: the first costs too much to rebuild as the code changes, and the second does not fit a local model.
