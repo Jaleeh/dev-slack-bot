@@ -38,3 +38,10 @@ def test_a_bad_agent_setting_does_not_stop_the_judge(monkeypatch: pytest.MonkeyP
     monkeypatch.setenv("SEARCH_SKIP", "docs/")
 
     assert EvalSettings(_env_file=None).judge_model == "ollama:ornith:9b"
+
+
+def test_ollama_judge_reads_as_much_context_as_the_agent_gathers() -> None:
+    judge = build_judge(EvalSettings(_env_file=None))
+
+    assert isinstance(judge, ChatOllama)
+    assert judge.num_ctx == 32768
