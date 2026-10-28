@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help up dev db down logs migrate test lint fmt eval eval-answers ask
+.PHONY: help up dev db down logs migrate test lint fmt eval eval-answers ask eval-agent
 
 # Make creates .env from the example first if it is missing, then re-reads it.
 -include .env
@@ -63,3 +63,9 @@ export Q
 
 ask: ## Answer Q="..." about the sample repo with the local agent (needs Ollama; takes minutes)
 	cd backend && uv run python -m evals.ask
+
+# Passed through the environment, so the space-separated list reaches the runner whole.
+export IDS
+
+eval-agent: ## Run the agent on every question, or IDS="a b" (needs Ollama; a full run takes hours)
+	cd backend && uv run python -m evals.agent_runner

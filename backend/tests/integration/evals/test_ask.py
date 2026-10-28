@@ -3,25 +3,13 @@ from pathlib import Path
 import pytest
 
 from evals.ask import AskConfig, main
-from tests.support import UNREACHABLE_URL
+
+pytestmark = pytest.mark.usefixtures("offline_model")
 
 
 @pytest.fixture
-def config(tmp_path: Path) -> AskConfig:
-    """A cache that already holds the sample repo, so no test needs the network."""
-    clone = tmp_path / "django-oscar@4.2.1"
-    clone.mkdir()
-    (clone / "README.md").write_text("Oscar\n")
-
-    return AskConfig(cache_dir=tmp_path)
-
-
-@pytest.fixture(autouse=True)
-def offline_model(monkeypatch: pytest.MonkeyPatch) -> None:
-    monkeypatch.setenv("CHAT_MODEL", "ollama:ornith:9b")
-    monkeypatch.setenv("OLLAMA_BASE_URL", UNREACHABLE_URL)
-    monkeypatch.delenv("RETRIEVAL", raising=False)
-    monkeypatch.delenv("SEARCH_SKIP", raising=False)
+def config(sample_cache: Path) -> AskConfig:
+    return AskConfig(cache_dir=sample_cache)
 
 
 def test_ask_stops_when_retrieval_is_not_direct(

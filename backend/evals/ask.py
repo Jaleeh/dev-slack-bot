@@ -18,6 +18,7 @@ from evals.dataset_file import InvalidDataset
 from evals.question_set import QUESTIONS_PATH, load_question_set
 from evals.run_record import EVALS_DIR, format_rows, stop
 from evals.sample_repo import SampleRepoError, fetch_sample_repo, sample_repo_for
+from evals.settings import describe_settings_error
 
 COMMAND = "ask"
 QUESTION_ENV = "Q"
@@ -60,13 +61,6 @@ def main(question: str, config: AskConfig = DEFAULT_CONFIG) -> int:
     return 0
 
 
-def describe_settings_error(error: ValidationError | SettingsError) -> str:
-    if isinstance(error, SettingsError):
-        return str(error)
-
-    return "; ".join(f"{'.'.join(map(str, e['loc']))}: {e['msg']}" for e in error.errors())
-
-
 def call_printer() -> Callable[[ToolCallRecord], None]:
     numbers = count(1)
 
@@ -77,9 +71,7 @@ def call_printer() -> Callable[[ToolCallRecord], None]:
 
 
 def describe_call(record: ToolCallRecord) -> str:
-    args = ", ".join(f"{name}={value!r}" for name, value in record.args.items())
-
-    return f"{record.name}({args}) {record.outcome.value}"
+    return f"{record.signature} {record.outcome.value}"
 
 
 def format_result(result: AgentResult) -> str:
