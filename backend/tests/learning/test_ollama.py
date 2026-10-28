@@ -40,11 +40,13 @@ def ask_judge(fact: str) -> Verdict:
     return reply
 
 
+@pytest.mark.model
 @pytest.mark.usefixtures("ollama_judge")
 def test_structured_output_returns_a_yes() -> None:
     assert ask_judge("The customer gets one free item per basket.").answer == "yes"
 
 
+@pytest.mark.model
 @pytest.mark.usefixtures("ollama_judge")
 def test_structured_output_returns_a_no() -> None:
     assert ask_judge("Vouchers can't be used by guest customers.").answer == "no"

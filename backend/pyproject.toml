@@ -47,3 +47,6 @@ plugins = ["pydantic.mypy"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+# Real model calls take about a minute and a half; `make test-models` runs them.
+addopts = "-m 'not model'"
+markers = ["model: calls a real model through Ollama"]
