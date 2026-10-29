@@ -23,11 +23,11 @@ from evals.agent_scores import (
     UnknownQuestions,
     agent_metrics,
     evidence,
+    judged_checks,
     score,
     select_questions,
 )
 from evals.dataset_file import InvalidDataset
-from evals.grader import grade
 from evals.question_set import QUESTIONS_PATH, Question, load_question_set
 from evals.run_record import (
     EVALS_DIR,
@@ -177,12 +177,10 @@ def evaluate_agent(plan: AgentRunPlan, harness: Harness) -> AgentRun:
 
 def run_question(question: Question, harness: Harness) -> QuestionScore:
     result = harness.agent.ask(question.question)
-    code = evidence(result)
+    attempt = Attempt(result=result, checks=(), evidence=evidence(result.tool_calls))
+    unjudged = score(question, attempt)
 
-    # The fallback claims nothing, so judging it would only inflate faithfulness.
-    checks = () if result.is_empty else grade(harness.judge, question, result.answer, code).checks
-
-    return score(question, Attempt(result=result, checks=checks, evidence=code))
+    return unjudged.model_copy(update={"checks": judged_checks(harness.judge, question, unjudged)})
 
 
 def describe(scored: QuestionScore) -> str:

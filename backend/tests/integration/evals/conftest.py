@@ -2,7 +2,11 @@ import subprocess
 from pathlib import Path
 
 import pytest
+import yaml
 
+from evals.agent_runner import AgentRunConfig
+from tests.answer_datasets import a_question_set
+from tests.integration.evals.agent_runs import QUESTIONS
 from tests.support import UNREACHABLE_URL
 
 GIT_IDENTITY = ("-c", "user.name=test", "-c", "user.email=test@example.com")
@@ -49,3 +53,15 @@ def sample_cache(tmp_path: Path) -> Path:
     (clone / "README.md").write_text("Oscar\n")
 
     return cache
+
+
+@pytest.fixture
+def config(tmp_path: Path, sample_cache: Path) -> AgentRunConfig:
+    questions_path = tmp_path / "questions.yaml"
+    questions_path.write_text(yaml.safe_dump(a_question_set(*QUESTIONS)))
+
+    return AgentRunConfig(
+        questions_path=questions_path,
+        cache_dir=sample_cache,
+        results_dir=tmp_path / "results",
+    )

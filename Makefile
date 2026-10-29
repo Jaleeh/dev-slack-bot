@@ -1,5 +1,5 @@
 .DEFAULT_GOAL := help
-.PHONY: help up dev db down logs migrate test test-models lint fmt eval eval-answers ask eval-agent
+.PHONY: help up dev db down logs migrate test test-models lint fmt eval eval-answers ask eval-agent regrade
 
 # Make creates .env from the example first if it is missing, then re-reads it.
 -include .env
@@ -72,3 +72,7 @@ export IDS
 
 eval-agent: ## Run the agent on every question, or IDS="a b" (needs Ollama; a full run takes hours)
 	cd backend && uv run python -m evals.agent_runner
+
+# RUN is given from the repo root, so it is made absolute before the cd.
+regrade: ## Re-judge a saved eval-agent run REPS times (default 5): RUN=path (needs Ollama)
+	cd backend && RUN="$(abspath $(RUN))" REPS="$(REPS)" uv run python -m evals.regrade

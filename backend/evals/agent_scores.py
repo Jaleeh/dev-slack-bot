@@ -5,12 +5,13 @@ from collections.abc import Sequence
 from dataclasses import dataclass
 from statistics import fmean
 
+from langchain_core.language_models import BaseChatModel
 from pydantic import BaseModel, ConfigDict, computed_field
 
-from app.agent.graph import AgentResult
+from app.agent.graph import AgentResult, ToolCallRecord
 from app.agent.guardrails import Outcome
 from evals.answer_set import FAITHFULNESS
-from evals.grader import CheckOutcome, CheckResult, fact_score, is_inconclusive
+from evals.grader import CheckOutcome, CheckResult, fact_score, grade, is_inconclusive
 from evals.question_set import Question, QuestionSet
 from evals.retrieval_metrics import recall_at_k, reciprocal_rank
 
@@ -53,6 +54,8 @@ class QuestionScore(BaseModel):
     seconds: float
     stop: str
     evidence_chars: int
+    # Empty in runs saved before evidence was kept; `make regrade` replays those.
+    evidence: str = ""
 
     @computed_field  # type: ignore[prop-decorator]
     @property
@@ -102,11 +105,11 @@ def select_questions(question_set: QuestionSet, ids: Sequence[str]) -> tuple[Que
     return tuple(question for question in question_set.questions if question.id in wanted)
 
 
-def evidence(result: AgentResult) -> str:
+def evidence(records: Sequence[ToolCallRecord]) -> str:
     """The text the tools returned on calls that ran: the code an answer is judged against."""
     return "\n\n".join(
         f"# {record.signature}\n{record.output}"
-        for record in result.tool_calls
+        for record in records
         if record.outcome is Outcome.RAN
     )
 
@@ -134,7 +137,18 @@ def score(question: Question, attempt: Attempt) -> QuestionScore:
         seconds=result.seconds,
         stop=result.stop.value,
         evidence_chars=len(attempt.evidence),
+        evidence=attempt.evidence,
     )
+
+
+def judged_checks(
+    judge: BaseChatModel, question: Question, scored: QuestionScore
+) -> tuple[CheckResult, ...]:
+    # The fallback claims nothing, so judging it would only inflate faithfulness.
+    if scored.is_empty:
+        return ()
+
+    return grade(judge, question, scored.answer, scored.evidence).checks
 
 
 def agent_metrics(scores: Sequence[QuestionScore]) -> AgentMetrics:

@@ -116,7 +116,7 @@ class Agent:
     def ask(self, question: str, on_call: Callable[[ToolCallRecord], None] = ignore) -> AgentResult:
         """Answers one question; `on_call` sees each tool call as it finishes."""
         started = time.monotonic()
-        graph = Loop(self, search_tools(self.search), on_call).compile()
+        graph = Loop(self, on_call).compile()
         config = {
             "recursion_limit": STEPS_PER_TOOL_CALL * self.limits.max_tool_calls + RECURSION_MARGIN
         }
@@ -139,21 +139,46 @@ def build_agent(settings: AgentSettings, root: Path) -> Agent:
     )
 
 
+@dataclass(frozen=True)
+class Toolbox:
+    """Runs the search tools by name and records each call the way the agent sees it."""
+
+    search: DirectSearch
+    tools: Mapping[str, StructuredTool]
+
+    @classmethod
+    def over(cls, search: DirectSearch) -> Toolbox:
+        return cls(search, {tool.name: tool for tool in search_tools(search)})
+
+    def execute(self, call: Call) -> ToolCallRecord:
+        tool = self.tools.get(call.name)
+        if tool is None:
+            known = ", ".join(self.tools)
+            return record_of(call, f"no tool named {call.name}; use one of {known}", Outcome.FAILED)
+
+        # Bad arguments are the model's mistake, so it gets the reason; anything else is a bug.
+        try:
+            output = tool.invoke(dict(call.args))
+        except (SearchError, ValidationError) as error:
+            return record_of(call, str(error), Outcome.FAILED)
+
+        return record_of(call, str(output), self.outcome_of_success(call))
+
+    def outcome_of_success(self, call: Call) -> Outcome:
+        is_folder_read = call.name == "read_file" and self.search.is_folder(str(call.args["path"]))
+
+        return Outcome.LISTED if is_folder_read else Outcome.RAN
+
+
 class Loop:
     """The graph's nodes. Decisions come from the guardrails; this class only does the I/O."""
 
-    def __init__(
-        self,
-        agent: Agent,
-        tools: Sequence[StructuredTool],
-        on_call: Callable[[ToolCallRecord], None],
-    ) -> None:
+    def __init__(self, agent: Agent, on_call: Callable[[ToolCallRecord], None]) -> None:
+        self.toolbox = Toolbox.over(agent.search)
         # Bound on every call, the forced one too: without tool definitions the model
         # still wrote a tool call and left the answer empty.
-        self.searcher = agent.search_model.bind_tools(tools)
+        self.searcher = agent.search_model.bind_tools(list(self.toolbox.tools.values()))
         self.rewriter = agent.rewrite_model
-        self.tools = {tool.name: tool for tool in tools}
-        self.search = agent.search
         self.limits = agent.limits
         self.on_call = on_call
 
@@ -214,26 +239,7 @@ class Loop:
             case Check.REREAD:
                 return record_of(call, REREAD_BLOCKED, Outcome.REREAD)
             case Check.RUN:
-                return self.execute(call)
-
-    def execute(self, call: Call) -> ToolCallRecord:
-        tool = self.tools.get(call.name)
-        if tool is None:
-            known = ", ".join(self.tools)
-            return record_of(call, f"no tool named {call.name}; use one of {known}", Outcome.FAILED)
-
-        # Bad arguments are the model's mistake, so it gets the reason; anything else is a bug.
-        try:
-            output = tool.invoke(dict(call.args))
-        except (SearchError, ValidationError) as error:
-            return record_of(call, str(error), Outcome.FAILED)
-
-        return record_of(call, str(output), self.outcome_of_success(call))
-
-    def outcome_of_success(self, call: Call) -> Outcome:
-        is_folder_read = call.name == "read_file" and self.search.is_folder(str(call.args["path"]))
-
-        return Outcome.LISTED if is_folder_read else Outcome.RAN
+                return self.toolbox.execute(call)
 
     def nudge_step(self, state: AgentState) -> dict[str, object]:
         return {
