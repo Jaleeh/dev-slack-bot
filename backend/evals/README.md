@@ -48,6 +48,12 @@ When the agent gives up, the asker gets "I couldn't work this out from the code"
 
 The results go to `results/agent-<time>.json`, rewritten after every question. If a run dies partway, the finished questions are kept, and the rest can be rerun with `IDS=`. Each file records the agent and judge settings it ran with.
 
+### Re-grading a saved run
+
+The judge doesn't always give the same verdict on the same answer, even at temperature 0, while the agent repeats its answers exactly. So one graded run can't tell two agent setups apart by a few questions. `make regrade RUN=backend/evals/results/agent-<time>.json` judges every non-empty answer in a saved run 5 times (`REPS=` to change) without running the agent, and writes `results/regrade-<time>.json`, rewritten after each pass. The summary gives each score's mean and lowest–highest across passes; retrieval scores come from the saved run unchanged.
+
+Runs saved before evidence was kept are replayed: the tool calls that ran are run again on the same repo with the same skip list. If any question's replayed evidence differs in length from what the run recorded, it stops and names the questions, rather than grade against different code. It also stops if the question set's version, repo or ref has changed since the run, or if the judge model differs from the one the run used.
+
 ## Files
 
 | File | Holds |

@@ -82,15 +82,13 @@ def test_unknown_id_is_refused_naming_it() -> None:
 
 
 def test_evidence_holds_only_output_from_calls_that_ran() -> None:
-    result = a_result(
-        tool_calls=(
-            a_record("grep", "hit", Outcome.RAN),
-            a_record("grep", "blocked", Outcome.REPEAT),
-            a_record("read_file", "no such file", Outcome.FAILED),
-        )
+    records = (
+        a_record("grep", "hit", Outcome.RAN),
+        a_record("grep", "blocked", Outcome.REPEAT),
+        a_record("read_file", "no such file", Outcome.FAILED),
     )
 
-    text = evidence(result)
+    text = evidence(records)
 
     assert "hit" in text
     assert "blocked" not in text

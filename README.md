@@ -26,6 +26,8 @@ Ask it in Slack how a business rule works, or whether a reported problem is a bu
 
 `make eval-agent` runs the agent on every eval question and scores, from that one run, whether it found the right files and how many key facts its answers state. **A full run takes about 3 hours.** `make eval-agent IDS="offer-order voucher-guest-rejected"` runs only those questions. It needs both models above. If a run dies partway, the questions it finished are kept in `backend/evals/results/`.
 
+`make regrade RUN=backend/evals/results/agent-<time>.json` judges a saved `eval-agent` run 5 times (`REPS=` to change) without running the agent again, and prints each score's mean and range. The judge can grade the same answer differently from one run to the next, so one pass is too noisy to compare two runs. It needs the grader model.
+
 `make dev`, `make test` and `make lint` need [uv](https://docs.astral.sh/uv/), Node 24 (`nvm use` reads `.nvmrc`) and pnpm on your machine.
 
 `make test` skips the few learning tests that call a real model, since they take over a minute. Run them with `make test-models` after upgrading Ollama, LangChain or a model.
