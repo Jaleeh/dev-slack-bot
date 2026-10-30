@@ -1,5 +1,7 @@
 # ADR-004: How the answer grader judges answers
 
+> **Reopened 2026-10-30.** On the bot's real answers, the grader passes claims it should fail. In a hand-check of 10 step 3 baseline answers (48 checks), it was wrong on 5, and gave the same wrong pass in all 3 gradings each time. Three of the five were faithfulness checks: an answer that set tax on a record that has no tax field, one that said promotions have no use limit, and one that twisted a code comment. The planted wrong answers below didn't show this, so passing them isn't enough. The model and wording choices below stand until a new decision replaces them. Evidence: the "Grader hand-check" section of the [step 3.3 plan](../plans/2026-10-28-step-3.3-agent-evals.md).
+
 ## Context and Problem Statement
 
 The bot answers questions about how the shop's code works. To measure how good those answers are, an AI model, the grader, reads each answer and replies yes or no to two kinds of question ([ADR-001](adr-001-how-answers-and-retrieval-are-evaluated.md)):
